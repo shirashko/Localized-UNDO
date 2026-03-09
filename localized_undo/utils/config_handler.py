@@ -2,6 +2,58 @@ import yaml
 from localized_undo.utils.paths import MODEL_DIR, DATASET_DIR, CACHE_DIR
 
 
+def load_distill_configs(yaml_path, setup_id):
+    """
+    Expands a base setup into a list of configurations for alpha/beta/seed sweep.
+    """
+    with open(yaml_path, 'r') as f:
+        data = yaml.safe_load(f)
+
+    base_cfg = data['default_config'].copy()
+    base_cfg.update(data['setups'][setup_id])
+    base_cfg.update(data['stopping_criteria'])
+
+    sweep = data['sweeps']
+    expanded_experiments = {}
+
+    for alpha in sweep['alphas']:
+        for beta in sweep['betas']:
+            # Handle seeds (if None, use default)
+            seeds = sweep['seeds'] if sweep['seeds'] else [base_cfg['seed']]
+            for seed in seeds:
+                config = base_cfg.copy()
+                config['noise_alpha'] = float(alpha)
+                config['noise_beta'] = float(beta)
+                config['seed'] = int(seed)
+
+                # Dynamic Paths
+                method = config['method']
+                config['teacher_model_name'] = str(MODEL_DIR / config['teacher_rel_path'])
+                config['student_model_name'] = config['teacher_model_name']  # Usually initialized from teacher
+
+                # Path Naming
+                path_suffix = f"-alpha_{alpha}-beta_{beta}-seed_{seed}"
+                base_name = f"gemma-2-0.3B_{method}-arithmetic-partial_distill"
+
+                config['output_dir'] = str(MODEL_DIR / "partial_distill_models_arith" / f"{base_name}{path_suffix}")
+                config['path_local_record'] = str(
+                    MODEL_DIR / "local_records/partial_distill_models_arith" / f"{base_name}{path_suffix}.txt")
+                config['wandb_run_name'] = f"{setup_id}_alpha{alpha}_beta{beta}_seed{seed}"
+
+                # Global Data Paths
+                config['eng_train_file'] = str(DATASET_DIR / "pretrain/train_eng.jsonl")
+                config['arithmetic_train_file'] = str(DATASET_DIR / "pretrain/train_all_arithmetic.jsonl")
+                config['eng_valid_file'] = str(DATASET_DIR / "pretrain/valid_eng.jsonl")
+
+                config['cache_dir'] = str(CACHE_DIR)
+                config['dataset_cache_dir'] = str(CACHE_DIR)
+
+                exp_id = f"{setup_id}_a{alpha}_b{beta}_s{seed}"
+                expanded_experiments[exp_id] = config
+
+    return expanded_experiments
+
+
 def load_unlearn_configs(yaml_path, base_setup_ids):
     with open(yaml_path, 'r') as f:
         data = yaml.safe_load(f)

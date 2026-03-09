@@ -1,0 +1,40 @@
+default_config:
+  seed: 42
+  batch_size: 15
+  gradient_accumulation_steps: 24
+  epochs: 1
+  learning_rate: 0.0007
+  max_steps: 1000
+  num_warmup_steps: 50
+  validation_steps: 20
+  save_checkpoint_steps: 50000
+  scheduler_type: "cosine"
+  min_lr: 0.00007
+  weight_decay: 0
+  gradient_clipping_threshold: 1.0
+  max_length: 256
+  interleave_probs: [0.75, 0.25]
+  join_or_subsequence: true
+  use_wandb: true
+  use_local_record: true
+  shrink_perturb_repeat: false
+
+# Early stopping configuration
+stopping_criteria:
+  stop_condition: "retain_arithmetic_only" # "english_only", "retain_arithmetic_only", "forget_arithmetic_only", "all"
+  english_threshold: null
+  retain_arithmetic_threshold: 0.05
+  forget_arithmetic_threshold: null
+
+# Experiment sweeps
+sweeps:
+  alphas: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+  betas: [0.1]
+  seeds: [111, 222, 333, 444, 555]
+
+setups:
+  gemma-2-0.3B_MaxEnt:
+    method: "MaxEnt"
+    # Pointing to the final_model from the Unlearning stage
+    teacher_rel_path: "unlearned_models/MaxEnt/gemma-2-0.3B_all_arithmetic+eng_lr_9.0e-05/final_model"
+    wandb_project: "gemma-2-0.3B_all_arithmetic+eng_sp_distill"
