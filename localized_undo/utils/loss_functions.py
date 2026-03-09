@@ -33,12 +33,12 @@ def custom_login():
 
     if hf_token and HUGGINGFACE_HUB_AVAILABLE:
         try:
-            print(f"[loss_functions.py] Logging into Hugging Face with token from {HF_TOKEN_PATH}...")
+            print(f"Logging into Hugging Face with token from {HF_TOKEN_PATH}...")
             login(token=hf_token, add_to_git_credential=True)
         except Exception as e:
             print(f"[Warning] Could not login: {e}")
     else:
-        print("[loss_functions.py] No valid HF token found or huggingface_hub not installed. Skipping HF login.")
+        print("No valid HF token found or huggingface_hub not installed. Skipping HF login.")
 
     WANDB_TOKEN_PATH = "tokens/wandb_token.txt"
     wandb_token = None
@@ -50,12 +50,12 @@ def custom_login():
     if wandb_token:
         try:
             import wandb
-            print(f"[loss_functions.py] Logging into Weights & Biases with token from {WANDB_TOKEN_PATH}...")
+            print(f"Logging into Weights & Biases with token from {WANDB_TOKEN_PATH}...")
             wandb.login(key=wandb_token)
         except Exception as e:
             print(f"[Warning] Could not login to Weights & Biases: {e}")
     else:
-        print("[loss_functions.py] No valid wandb token found. Skipping wandb login.")
+        print("No valid wandb token found. Skipping wandb login.")
 
 
 def check_output_dir(output_dir):
