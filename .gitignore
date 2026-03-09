@@ -209,4 +209,4 @@ __marimo__/
 # Python build/dist files
 .venv/
 
-.tokens/
+tokens/
