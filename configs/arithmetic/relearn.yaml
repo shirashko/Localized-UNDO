@@ -1,0 +1,43 @@
+default_config:
+  seed: 42
+  batch_size: 15
+  gradient_accumulation_steps: 1
+  epochs: 1
+  max_steps: 500
+  num_warmup_steps: 1
+  validation_steps: 5
+  save_checkpoint_steps: 999
+  scheduler_type: "cosine"
+  weight_decay: 0.0
+  gradient_clipping_threshold: 1.0
+  max_length: 256
+  join_or_subsequence: true
+  use_wandb: true
+  use_local_record: true
+  save_models: false
+  device: "cuda"
+
+# The specific relearning rates to sweep
+relearn_lrs: [1e-3, 7e-4, 4e-4, 1e-4, 7e-5, 5e-5, 1e-5, 7e-6, 4e-6, 1e-6]
+
+setups:
+  gemma-2-0.3B_all_data:
+    first_train_file: "pretrain/train_eng.jsonl"
+    second_train_file: "pretrain/train_all_arithmetic.jsonl"
+    interleave_probs: [0.75, 0.25]
+    wandb_project: "gemma-2-0.3B_relearn_all_data"
+    shrink_perturb_relearning: 0
+
+  gemma-2-0.3B_all_data_perturb:
+    first_train_file: "pretrain/train_eng.jsonl"
+    second_train_file: "pretrain/train_all_arithmetic.jsonl"
+    interleave_probs: [0.75, 0.25]
+    wandb_project: "gemma-2-0.3B_relearn_all_data_perturb"
+    shrink_perturb_relearning: 0.1
+
+  gemma-2-0.3B_train_only_forget:
+    first_train_file: "pretrain/train_addition_subtraction.jsonl"
+    second_train_file: null
+    interleave_probs: [1.0]
+    wandb_project: "gemma-2-0.3B_relearn_only_forget"
+    shrink_perturb_relearning: 0

@@ -2,6 +2,60 @@ import yaml
 from localized_undo.utils.paths import MODEL_DIR, DATASET_DIR, CACHE_DIR
 
 
+def load_relearn_configs(yaml_path, setup_ids, models_to_run):
+    """
+    Expands relearning setups across multiple models and multiple learning rates.
+    """
+    with open(yaml_path, 'r') as f:
+        data = yaml.safe_load(f)
+
+    relearn_lrs = data['relearn_lrs']
+    expanded_experiments = {}
+
+    for setup_id in setup_ids:
+        base_cfg = data['default_config'].copy()
+        base_cfg.update(data['setups'][setup_id])
+
+        for model_rel_path in models_to_run:
+            for lr in relearn_lrs:
+                config = base_cfg.copy()
+                lr_val = float(lr)
+                config['learning_rate'] = lr_val
+                config['min_lr'] = lr_val
+
+                # Model Pathing
+                # If it's a distilled model, it might not have the 'final_model' subfolder
+                full_model_path = MODEL_DIR / model_rel_path
+                if "distilled" not in str(full_model_path) and "pretrained" not in str(full_model_path):
+                    if not str(full_model_path).endswith("final_model"):
+                        full_model_path = full_model_path / "final_model"
+
+                config['model_name'] = str(full_model_path)
+
+                # Output Naming Logic
+                safe_model_name = model_rel_path.replace('/', '_')
+                exp_label = f"relearned_{safe_model_name}_{lr_val:.1e}"
+
+                config['output_dir'] = str(MODEL_DIR / "relearned_models" / setup_id / exp_label)
+                config['path_local_record'] = str(
+                    MODEL_DIR / "local_records/relearned_models" / setup_id / f"{exp_label}.txt")
+                config['wandb_run_name'] = f"{safe_model_name}_lr_{lr_val:.1e}"
+
+                # Data Paths
+                config['eng_valid_file'] = str(DATASET_DIR / "pretrain/valid_eng.jsonl")
+                config['first_train_file'] = str(DATASET_DIR / config['first_train_file'])
+                if config['second_train_file']:
+                    config['second_train_file'] = str(DATASET_DIR / config['second_train_file'])
+
+                config['cache_dir'] = str(CACHE_DIR)
+                config['dataset_cache_dir'] = str(CACHE_DIR)
+
+                unique_id = f"{setup_id}_{safe_model_name}_lr{lr_val}"
+                expanded_experiments[unique_id] = config
+
+    return expanded_experiments
+
+
 def load_distill_configs(yaml_path, setup_id):
     """
     Expands a base setup into a list of configurations for alpha/beta/seed sweep.
