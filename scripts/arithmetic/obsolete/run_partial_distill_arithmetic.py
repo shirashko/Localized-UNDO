@@ -1,7 +1,7 @@
 """
 Configured for a (any)xH100/H200/A100 GPU server.
 
-Launch Command: python run_partial_distill_arithmetic.py --run_all
+Launch Command: python run_partial_distill.py --run_all
 """
 
 from localized_undo.tools.partial_distill_langarith import partial_distill
@@ -389,11 +389,11 @@ if __name__ == "__main__":
         parser.print_help()
         print("\nExamples:")
         print("  # Run a single experiment:")
-        print("  python run_partial_distill_arithmetic.py --setup gemma-2-0.3B_MaxEnt --alpha 0.3 --beta 0.1")
-        print("  python run_partial_distill_arithmetic.py --setup gemma-2-0.3B_MaxEnt --alpha 0.3 --seed 123")
+        print("  python run_partial_distill.py --setup gemma-2-0.3B_MaxEnt --alpha 0.3 --beta 0.1")
+        print("  python run_partial_distill.py --setup gemma-2-0.3B_MaxEnt --alpha 0.3 --seed 123")
         print("  # Run all experiments in parallel:")
-        print("  python run_partial_distill_arithmetic.py --run_all")
+        print("  python run_partial_distill.py --run_all")
         print("  # Run with specific stopping condition:")
-        print("  python run_partial_distill_arithmetic.py --run_all --stop_condition retain_arithmetic_only")
+        print("  python run_partial_distill.py --run_all --stop_condition retain_arithmetic_only")
         print("  # Resume from a specific alpha value:")
-        print("  python run_partial_distill_arithmetic.py --start_alpha 0.4")
+        print("  python run_partial_distill.py --start_alpha 0.4")

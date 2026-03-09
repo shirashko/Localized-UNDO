@@ -1,7 +1,7 @@
 """
 Configured for a (any)xA100 GPU server.
 
-Launch Command: python run_relearn_arithmetic.py
+Launch Command: python run_relearn.py
 """
 
 from localized_undo.tools.relearn_langarith import relearn

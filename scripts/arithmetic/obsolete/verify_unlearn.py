@@ -7,8 +7,8 @@ from pathlib import Path
 
 # Path definitions
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-FILE_OLD = PROJECT_ROOT / "scripts/arithmetic/run_unlearn_arithmetic.py"
-FILE_NEW = PROJECT_ROOT / "scripts/arithmetic/run_unlearn_arithmetic.py"
+FILE_OLD = PROJECT_ROOT / "scripts/arithmetic/run_unlearn.py"
+FILE_NEW = PROJECT_ROOT / "scripts/arithmetic/run_unlearn.py"
 
 
 class TestUnlearnConfigParity(unittest.TestCase):

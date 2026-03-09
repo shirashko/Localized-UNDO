@@ -7,8 +7,8 @@ from pathlib import Path
 
 # Path definitions
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-FILE_OLD = PROJECT_ROOT / "scripts/arithmetic/run_pretrain_arithmetic.py"
-FILE_NEW = PROJECT_ROOT / "scripts/arithmetic/run_pretrain_arithmetic.py"
+FILE_OLD = PROJECT_ROOT / "scripts/arithmetic/run_pretrain.py"
+FILE_NEW = PROJECT_ROOT / "scripts/arithmetic/run_pretrain.py"
 
 
 class TestConfigParity(unittest.TestCase):
@@ -55,7 +55,7 @@ class TestConfigParity(unittest.TestCase):
             new_module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(new_module)
 
-            with patch('sys.argv', ['run_pretrain_arithmetic.py', '--setup', setup_id]):
+            with patch('sys.argv', ['run_pretrain.py', '--setup', setup_id]):
                 new_module.main()
 
             args_new, kwargs_new = mock_train_new.call_args

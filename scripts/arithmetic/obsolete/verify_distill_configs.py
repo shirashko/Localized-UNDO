@@ -6,8 +6,8 @@ from pathlib import Path
 
 # Path definitions
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-FILE_OLD = PROJECT_ROOT / "scripts/arithmetic/run_partial_distill_arithmetic.py"
-FILE_NEW = PROJECT_ROOT / "scripts/arithmetic/run_partial_distill_arithmetic.py"
+FILE_OLD = PROJECT_ROOT / "scripts/arithmetic/run_partial_distill.py"
+FILE_NEW = PROJECT_ROOT / "scripts/arithmetic/run_partial_distill.py"
 
 
 class TestDistillConfigParity(unittest.TestCase):
@@ -27,7 +27,7 @@ class TestDistillConfigParity(unittest.TestCase):
         with patch('localized_undo.utils.parallel_launch.launch_in_parallel_one_per_gpu') as mock_launch:
             with patch('localized_undo.utils.loss_functions.custom_login'):
                 # Force run_all to trigger the sweep
-                with patch('sys.argv', ['run_partial_distill_arithmetic.py', '--run_all']):
+                with patch('sys.argv', ['run_partial_distill.py', '--run_all']):
                     # We run runpy to get the 'setups' dict from the old file's global scope
                     old_globals = runpy.run_path(str(FILE_OLD), run_name="__main__")
                     old_base_cfg = old_globals['setups'][setup_id]
