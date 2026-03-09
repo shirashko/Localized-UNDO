@@ -3,6 +3,7 @@ default_config:
   device: "cuda"
   epochs: 1
   max_steps: 10
+  num_warmup_steps: 0
   validation_steps: 1
   save_checkpoint_steps: -1
   scheduler_type: "cosine"
