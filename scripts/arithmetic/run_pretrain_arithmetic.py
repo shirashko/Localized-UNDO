@@ -1,6 +1,7 @@
 from localized_undo.tools.pretrain import train
 from localized_undo.utils.paths import CACHE_DIR, DATASET_DIR, MODEL_DIR, WANDB_API_KEY_PATH
 from localized_undo.utils.validation_functions import evaluate_ce_loss, get_arithmetic_eval_fn
+from accelerate import Accelerator
 
 # SETUPS_TO_RUN = ['gemma-2-0.1B_all_arithmetic+eng', 'gemma-2-0.1B_addition_subtraction+eng']
 # SETUPS_TO_RUN = ['gemma-2-0.6B_all_arithmetic+eng', 'gemma-2-0.6B_addition_subtraction+eng']
