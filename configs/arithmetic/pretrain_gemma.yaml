@@ -1,0 +1,48 @@
+default_config:
+  seed: 42
+  device: "cuda"
+  epochs: 1
+  learning_rate: 0.0004
+  min_lr: 0.0004
+  max_steps: 1000
+  num_warmup_steps: 50
+  validation_steps: 100
+  save_checkpoint_steps: 500
+  scheduler_type: "cosine"
+  weight_decay: 0
+  gradient_clipping_threshold: 1.0
+  max_length: 256
+  join_or_subsequence: true
+  use_wandb: true
+  use_local_record: true
+
+setups:
+  # --- Models 0.1B ---
+  gemma-2-0.1B_all_arithmetic+eng:
+    model_id: "gemma-2-0.1B"
+    arithmetic_type: "all_arithmetic"
+    batch_size: 45
+    gradient_accumulation_steps: 8
+    interleave_probs: [0.75, 0.25]
+
+  gemma-2-0.1B_addition_subtraction+eng:
+    model_id: "gemma-2-0.1B"
+    arithmetic_type: "addition_subtraction"
+    batch_size: 15
+    gradient_accumulation_steps: 24
+    interleave_probs: [0.875, 0.125]
+
+  # --- Models 0.3B ---
+  gemma-2-0.3B_all_arithmetic+eng:
+    model_id: "gemma-2-0.3B"
+    arithmetic_type: "all_arithmetic"
+    batch_size: 15
+    gradient_accumulation_steps: 24
+    interleave_probs: [0.75, 0.25]
+
+  gemma-2-0.3B_addition_subtraction+eng:
+    model_id: "gemma-2-0.3B"
+    arithmetic_type: "addition_subtraction"
+    batch_size: 15
+    gradient_accumulation_steps: 24
+    interleave_probs: [0.875, 0.125]
