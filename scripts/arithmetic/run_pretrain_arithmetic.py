@@ -1,265 +1,65 @@
-from localized_undo.tools.pretrain import train
-from localized_undo.utils.paths import CACHE_DIR, DATASET_DIR, MODEL_DIR, WANDB_API_KEY_PATH
-from localized_undo.utils.validation_functions import evaluate_ce_loss, get_arithmetic_eval_fn
+import argparse
 from accelerate import Accelerator
+from localized_undo.tools.pretrain import train
+from localized_undo.utils.paths import WANDB_API_KEY_PATH, CONFIG_DIR
+from localized_undo.utils.config_handler import load_pretrain_config
+from localized_undo.utils.validation_functions import get_arithmetic_eval_fn
 
-# SETUPS_TO_RUN = ['gemma-2-0.1B_all_arithmetic+eng', 'gemma-2-0.1B_addition_subtraction+eng']
-# SETUPS_TO_RUN = ['gemma-2-0.6B_all_arithmetic+eng', 'gemma-2-0.6B_addition_subtraction+eng']
-SETUPS_TO_RUN = ['gemma-2-0.3B_all_arithmetic+eng', 'gemma-2-0.3B_addition_subtraction+eng']
 
-try:
-    with open(WANDB_API_KEY_PATH, "r", encoding="utf-8") as f:
-        api_key = f.read().strip()
-except Exception as e:
-    print(f"[ERROR] Unable to read WandB API key from {WANDB_API_KEY_PATH}. Exception: {e}")
-    exit(1)
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--setup", type=str, required=True, help="setup_id from YAML")
+    args = parser.parse_args()
 
-setups = {
-    "gemma-2-0.1B_all_arithmetic+eng": {
-        'model_name'       : f"{MODEL_DIR}/random_init_models/gemma-2-0.1B",
-        'eng_train_file'   : f"{DATASET_DIR}/pretrain/train_eng.jsonl",
-        'secondary_train_files'   : [f"{DATASET_DIR}/pretrain/train_all_arithmetic.jsonl"],
-        'eng_valid_file'   : f"{DATASET_DIR}/pretrain/valid_eng.jsonl",
-        'interleave_probs' : [.75, .25],
-        'output_dir'       : f"{MODEL_DIR}/pretrained_models/gemma-2-0.1B_all_arithmetic+eng",
-        'cache_dir'        : CACHE_DIR,
-        'dataset_cache_dir': CACHE_DIR,
+    # 1. Load configuration
+    yaml_path = CONFIG_DIR / "arithmetic" / "pretrain.yaml"
+    config = load_pretrain_config(yaml_path, args.setup)
 
-        'seed'                        : 42,
-        'device'                      : "cuda",
-        'batch_size'                  : 45,
-        'gradient_accumulation_steps' : 8,
-        'join_or_subsequence'         : True,
-        'epochs'                      : 1,
-        'learning_rate'               : 4e-4,
-        'max_steps'                   : 1000,             
-        'num_warmup_steps'            : 50,
-        'validation_steps'            : 100,
-        'save_checkpoint_steps'       : 500,
-        'scheduler_type'              : "cosine",  
-        'min_lr'                      : 4e-4,
-        'weight_decay'                : 0,
-        'gradient_clipping_threshold' : 1.0,
-        'max_length'                  : 256,
-        'use_wandb'        : True,
-        'wandb_project'    : "gemma-2-0.1B_all_arithmetic+eng",
-        'wandb_run_name'   : None,
-        'wandb_api_key'    : api_key,
-        'use_local_record' : True,
-        'path_local_record': f"{MODEL_DIR}/local_records/pretrained_models/gemma-2-0.1B_all_arithmetic+eng.txt",   
-    },
-    "gemma-2-0.1B_addition_subtraction+eng": {
-        'model_name'       : f"{MODEL_DIR}/random_init_models/gemma-2-0.1B",
-        'eng_train_file'   : f"{DATASET_DIR}/pretrain/train_eng.jsonl",
-        'secondary_train_files'   : [f"{DATASET_DIR}/pretrain/train_addition_subtraction.jsonl"],
-        'eng_valid_file'   : f"{DATASET_DIR}/pretrain/valid_eng.jsonl",
-        'interleave_probs' : [.875, .125],
-        'output_dir'       : f"{MODEL_DIR}/pretrained_models/gemma-2-0.1B_addition_subtraction+eng",
-        'cache_dir'        : CACHE_DIR,
-        'dataset_cache_dir': CACHE_DIR,
+    # 2. Load WandB API key
+    try:
+        api_key = WANDB_API_KEY_PATH.read_text().strip()
+    except Exception as e:
+        print(f"Error reading WandB key: {e}")
+        return
 
-        'seed'                        : 42,
-        'device'                      : "cuda",
-        'batch_size'                  : 15,
-        'gradient_accumulation_steps' : 24,
-        'join_or_subsequence'         : True,
-        'epochs'                      : 1,
-        'learning_rate'               : 4e-4,
-        'max_steps'                   : 1000,             
-        'num_warmup_steps'            : 50,
-        'validation_steps'            : 100,
-        'save_checkpoint_steps'       : 500,
-        'scheduler_type'              : "cosine",  
-        'min_lr'                      : 4e-4,
-        'weight_decay'                : 0,
-        'gradient_clipping_threshold' : 1.0,
-        'max_length'                  : 256,
-        'use_wandb'        : True,
-        'wandb_project'    : "gemma-2-0.1B_addition_subtraction+eng",
-        'wandb_run_name'   : None,
-        'wandb_api_key'    : api_key,
-        'use_local_record' : True,
-        'path_local_record': f"{MODEL_DIR}/local_records/pretrained_models/gemma-2-0.1B_addition_subtraction+eng.txt",   
-    },
-        "gemma-2-0.3B_all_arithmetic+eng": {
-        'model_name'       : f"{MODEL_DIR}/random_init_models/gemma-2-0.3B",
-        'eng_train_file'   : f"{DATASET_DIR}/pretrain/train_eng.jsonl",
-        'secondary_train_files'   : [f"{DATASET_DIR}/pretrain/train_all_arithmetic.jsonl"],
-        'eng_valid_file'   : f"{DATASET_DIR}/pretrain/valid_eng.jsonl",
-        'interleave_probs' : [.75, .25],
-        'output_dir'       : f"{MODEL_DIR}/pretrained_models/gemma-2-0.3B_all_arithmetic+eng",
-        'cache_dir'        : CACHE_DIR,
-        'dataset_cache_dir': CACHE_DIR,
+    accelerator = Accelerator()
 
-        'seed'                        : 42,
-        'device'                      : "cuda",
-        'batch_size'                  : 15,
-        'gradient_accumulation_steps' : 24,
-        'join_or_subsequence'         : True,
-        'epochs'                      : 1,
-        'learning_rate'               : 4e-4,
-        'max_steps'                   : 1000,             
-        'num_warmup_steps'            : 50,
-        'validation_steps'            : 100,
-        'save_checkpoint_steps'       : 500,
-        'scheduler_type'              : "cosine",  
-        'min_lr'                      : 4e-4,
-        'weight_decay'                : 0,
-        'gradient_clipping_threshold' : 1.0,
-        'max_length'                  : 256,
-        'use_wandb'        : True,
-        'wandb_project'    : "gemma-2-0.3B_all_arithmetic+eng",
-        'wandb_run_name'   : None,
-        'wandb_api_key'    : api_key,
-        'use_local_record' : True,
-        'path_local_record': f"{MODEL_DIR}/local_records/pretrained_models/gemma-2-0.3B_all_arithmetic+eng.txt",   
-    },
-    "gemma-2-0.3B_addition_subtraction+eng": {
-        'model_name'       : f"{MODEL_DIR}/random_init_models/gemma-2-0.3B",
-        'eng_train_file'   : f"{DATASET_DIR}/pretrain/train_eng.jsonl",
-        'secondary_train_files'   : [f"{DATASET_DIR}/pretrain/train_addition_subtraction.jsonl"],
-        'eng_valid_file'   : f"{DATASET_DIR}/pretrain/valid_eng.jsonl",
-        'interleave_probs' : [.875, .125],
-        'output_dir'       : f"{MODEL_DIR}/pretrained_models/gemma-2-0.3B_addition_subtraction+eng",
-        'cache_dir'        : CACHE_DIR,
-        'dataset_cache_dir': CACHE_DIR,
+    # 3. Create the evaluation function
+    eval_fn = get_arithmetic_eval_fn(
+        model_name=config['model_name'],
+        eng_valid_file=config['eng_valid_file'],
+        batch_size=config['batch_size'],
+        max_length=config['max_length'],
+        cache_dir=config['cache_dir'],
+        dataset_cache_dir=config['dataset_cache_dir'],
+        num_wiki_batches=50,
+        accelerator=accelerator
+    )
 
-        'seed'                        : 42,
-        'device'                      : "cuda",
-        'batch_size'                  : 15,
-        'gradient_accumulation_steps' : 24,
-        'join_or_subsequence'         : True,
-        'epochs'                      : 1,
-        'learning_rate'               : 4e-4,
-        'max_steps'                   : 1000,             
-        'num_warmup_steps'            : 50,
-        'validation_steps'            : 100,
-        'save_checkpoint_steps'       : 500,
-        'scheduler_type'              : "cosine",  
-        'min_lr'                      : 4e-4,
-        'weight_decay'                : 0,
-        'gradient_clipping_threshold' : 1.0,
-        'max_length'                  : 256,
-        'use_wandb'        : True,
-        'wandb_project'    : "gemma-2-0.3B_addition_subtraction+eng",
-        'wandb_run_name'   : None,
-        'wandb_api_key'    : api_key,
-        'use_local_record' : True,
-        'path_local_record': f"{MODEL_DIR}/local_records/pretrained_models/gemma-2-0.3B_addition_subtraction+eng.txt",   
-    },
-    "gemma-2-0.6B_all_arithmetic+eng": {
-        'model_name'       : f"{MODEL_DIR}/random_init_models/gemma-2-0.6B",
-        'eng_train_file'   : f"{DATASET_DIR}/pretrain/train_eng.jsonl",
-        'secondary_train_files'   : [f"{DATASET_DIR}/pretrain/train_all_arithmetic.jsonl"],
-        'eng_valid_file'   : f"{DATASET_DIR}/pretrain/valid_eng.jsonl",
-        'interleave_probs' : [.75, .25],
-        'output_dir'       : f"{MODEL_DIR}/pretrained_models/gemma-2-0.6B_all_arithmetic+eng",
-        'cache_dir'        : CACHE_DIR,
-        'dataset_cache_dir': CACHE_DIR,
+    # 4. Prepare training files (The flattening fix)
+    train_files = [config['eng_train_file']] + config['secondary_train_files']
 
-        'seed'                        : 42,
-        'device'                      : "cuda",
-        'batch_size'                  : 10,
-        'gradient_accumulation_steps' : 36,
-        'join_or_subsequence'         : True,
-        'epochs'                      : 1,
-        'learning_rate'               : 4e-4,
-        'max_steps'                   : 1000,             
-        'num_warmup_steps'            : 50,
-        'validation_steps'            : 100,
-        'save_checkpoint_steps'       : 500,
-        'scheduler_type'              : "cosine",  
-        'min_lr'                      : 4e-4,
-        'weight_decay'                : 0,
-        'gradient_clipping_threshold' : 1.0,
-        'max_length'                  : 256,
-        'use_wandb'        : True,
-        'wandb_project'    : "gemma-2-0.6B_all_arithmetic+eng",
-        'wandb_run_name'   : None,
-        'wandb_api_key'    : api_key,
-        'use_local_record' : True,
-        'path_local_record': f"{MODEL_DIR}/local_records/pretrained_models/gemma-2-0.6B_all_arithmetic+eng.txt",   
-    },
-    "gemma-2-0.6B_addition_subtraction+eng": {
-        'model_name'       : f"{MODEL_DIR}/random_init_models/gemma-2-0.6B",
-        'eng_train_file'   : f"{DATASET_DIR}/pretrain/train_eng.jsonl",
-        'secondary_train_files'   : [f"{DATASET_DIR}/pretrain/train_addition_subtraction.jsonl"],
-        'eng_valid_file'   : f"{DATASET_DIR}/pretrain/valid_eng.jsonl",
-        'interleave_probs' : [.875, .125],
-        'output_dir'       : f"{MODEL_DIR}/pretrained_models/gemma-2-0.6B_addition_subtraction+eng",
-        'cache_dir'        : CACHE_DIR,
-        'dataset_cache_dir': CACHE_DIR,
+    # 5. Filter parameters to match the train() function signature
+    # We remove keys that are used for setup/loading but not by the train function itself
+    keys_to_exclude = [
+        'model_id',
+        'arithmetic_type',
+        'eng_train_file',
+        'secondary_train_files',
+        'eng_valid_file'
+    ]
 
-        'seed'                        : 42,
-        'device'                      : "cuda",
-        'batch_size'                  : 10,
-        'gradient_accumulation_steps' : 36,
-        'join_or_subsequence'         : True,
-        'epochs'                      : 1,
-        'learning_rate'               : 4e-4,
-        'max_steps'                   : 1000,             
-        'num_warmup_steps'            : 50,
-        'validation_steps'            : 100,
-        'save_checkpoint_steps'       : 500,
-        'scheduler_type'              : "cosine",  
-        'min_lr'                      : 4e-4,
-        'weight_decay'                : 0,
-        'gradient_clipping_threshold' : 1.0,
-        'max_length'                  : 256,
-        'use_wandb'        : True,
-        'wandb_project'    : "gemma-2-0.6B_addition_subtraction+eng",
-        'wandb_run_name'   : None,
-        'wandb_api_key'    : api_key,
-        'use_local_record' : True,
-        'path_local_record': f"{MODEL_DIR}/local_records/pretrained_models/gemma-2-0.6B_addition_subtraction+eng.txt",   
-    },
-}
+    train_params = {k: v for k, v in config.items() if k not in keys_to_exclude}
+
+    # 6. Run the training loop
+    train(
+        eval_fn=eval_fn,
+        accelerator=accelerator,
+        wandb_api_key=api_key,
+        train_files=train_files,
+        **train_params
+    )
+
 
 if __name__ == "__main__":
-    for setup_id in SETUPS_TO_RUN:
-        accelerator = Accelerator()
-
-        arithmetic_eval_fn = get_arithmetic_eval_fn(
-            # gets a function that takes a model returns a dicitonary with equation/word problem accuracty for each operation and english validation CE loss
-            model_name          = setups[setup_id]['model_name'],
-            eng_valid_file      = setups[setup_id]['eng_valid_file'],
-            batch_size          = setups[setup_id]['batch_size'],
-            max_length          = setups[setup_id]['max_length'],
-            cache_dir           = setups[setup_id]['cache_dir'],
-            dataset_cache_dir   = setups[setup_id]['dataset_cache_dir'],
-            num_wiki_batches    = 50,
-            accelerator         = accelerator
-        )
-
-        train(
-            model_name       = setups[setup_id]['model_name'],
-            train_files      = [setups[setup_id]['eng_train_file'], setups[setup_id]['secondary_train_files']],
-            interleave_probs = setups[setup_id]['interleave_probs'],
-            output_dir       = setups[setup_id]['output_dir'],
-            cache_dir        = setups[setup_id]['cache_dir'],
-            dataset_cache_dir= setups[setup_id]['dataset_cache_dir'],
-            eval_fn          = arithmetic_eval_fn,
-            accelerator      = accelerator,
-            seed             = setups[setup_id]['seed'],
-            device           = setups[setup_id]['device'],
-            batch_size       = setups[setup_id]['batch_size'],
-            join_or_subsequence   = setups[setup_id]['join_or_subsequence'],
-            gradient_accumulation_steps = setups[setup_id]['gradient_accumulation_steps'],
-            epochs           = setups[setup_id]['epochs'],
-            learning_rate    = setups[setup_id]['learning_rate'],
-            max_steps        = setups[setup_id]['max_steps'],   
-            num_warmup_steps = setups[setup_id]['num_warmup_steps'],
-            validation_steps = setups[setup_id]['validation_steps'],
-            save_checkpoint_steps = setups[setup_id]['save_checkpoint_steps'],
-            scheduler_type   = setups[setup_id]['scheduler_type'],  
-            min_lr           = setups[setup_id]['min_lr'],          
-            weight_decay     = setups[setup_id]['weight_decay'],    
-            gradient_clipping_threshold = setups[setup_id]['gradient_clipping_threshold'], 
-            max_length       = setups[setup_id]['max_length'],
-            use_wandb        = setups[setup_id]['use_wandb'],
-            wandb_project    = setups[setup_id]['wandb_project'],
-            wandb_run_name   = setups[setup_id]['wandb_run_name'],
-            wandb_api_key    = setups[setup_id]['wandb_api_key'],
-            use_local_record = setups[setup_id]['use_local_record'],
-            path_local_record= setups[setup_id]['path_local_record'],
-        )
+    main()
