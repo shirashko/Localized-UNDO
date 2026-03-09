@@ -7,15 +7,14 @@ from typing import List, Optional
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.loss_functions import forward_kl_loss_fn, cross_entropy_loss_fn, cross_entropy_loss_fn_only, print_acc, custom_login
-from utils.generate_arithmetic import get_equations, get_template_word_problems
+from localized_undo.utils.loss_functions import forward_kl_loss_fn, cross_entropy_loss_fn, cross_entropy_loss_fn_only, print_acc, custom_login
+from localized_undo.utils.generate_arithmetic import get_equations, get_template_word_problems
 from transformers import AutoTokenizer, DataCollatorWithPadding
 from datasets import load_dataset
 from torch.utils.data import DataLoader
 import time
 from functools import partial
 import re
-from utils.process_datasets import make_sequence_length
 
 
 def evaluate_kd_ce_ppl(student_model, teacher_model, data_loader, pad_token_id, accelerator, fn_only=False):

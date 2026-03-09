@@ -4,7 +4,6 @@ import math
 import json
 
 import torch
-from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader
 from datasets import load_dataset, interleave_datasets
 from accelerate import Accelerator
@@ -17,8 +16,8 @@ from transformers import (
 import wandb
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.loss_functions import forward_kl_loss_fn, print_acc
-from utils.process_datasets import make_sequence_length
+from localized_undo.utils.loss_functions import forward_kl_loss_fn, print_acc
+from localized_undo.utils.process_datasets import make_sequence_length
 
 def distill(
     teacher_model_name,

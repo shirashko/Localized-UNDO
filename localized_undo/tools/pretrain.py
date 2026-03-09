@@ -2,7 +2,7 @@ import os
 import random
 import torch
 from torch.utils.data import DataLoader
-from datasets import load_dataset, interleave_datasets
+from datasets import load_dataset
 from transformers import (
     AutoConfig,
     AutoModelForCausalLM,
@@ -13,10 +13,9 @@ import wandb
 import math
 import json
 import sys
-import time
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.loss_functions import cross_entropy_loss_fn, print_acc
-from utils.process_datasets import make_sequence_length
+from localized_undo.utils.loss_functions import cross_entropy_loss_fn, print_acc
+from localized_undo.utils.process_datasets import make_sequence_length
 
 torch.set_float32_matmul_precision('high')
 

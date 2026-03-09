@@ -1,15 +1,13 @@
 import os
 import json
 import random
-import math
-import sys
 from functools import partial
 from multiprocessing import Pool, cpu_count
 from transformers import AutoTokenizer
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.paths import CACHE_DIR, DATASET_DIR, MODEL_DIR
-from utils.loss_functions import custom_makedirs
+from localized_undo.utils.paths import  DATASET_DIR
+from localized_undo.utils.loss_functions import custom_makedirs
 # -----------------------------------------------------
 # Global config
 # -----------------------------------------------------

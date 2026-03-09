@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.paths import CACHE_DIR, DATASET_DIR
+from localized_undo.utils.paths import CACHE_DIR, DATASET_DIR
 
 OUTPUT_DIR = DATASET_DIR + "/fineweb"
 os.makedirs(OUTPUT_DIR, exist_ok=True)

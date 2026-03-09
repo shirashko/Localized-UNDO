@@ -4,8 +4,8 @@ import orjson
 import sys
 import random
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.paths import DATASET_DIR
-from utils.generate_arithmetic import get_equations, get_template_word_problems
+from localized_undo.utils.paths import DATASET_DIR
+from localized_undo.utils.generate_arithmetic import get_equations, get_template_word_problems
 
 SEED=99
 def generate_and_save(operations, amount, output_path):

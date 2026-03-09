@@ -1,6 +1,4 @@
 import os
-import torch
-import copy
 
 from transformers import (
     AutoConfig,
@@ -17,7 +15,7 @@ except ImportError:
 
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.paths import CACHE_DIR, MODEL_DIR
+from localized_undo.utils.paths import CACHE_DIR, MODEL_DIR
 
 MODEL = "google/gemma-2-2b"
 HF_TOKEN_PATH = "tokens/hf_token.txt"

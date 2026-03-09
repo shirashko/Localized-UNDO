@@ -16,9 +16,8 @@ from transformers import (
 import wandb
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.loss_functions import forward_kl_loss_fn, print_acc, custom_makedirs
-from utils.validation_functions import evaluate_kd_ce_ppl
-from utils.process_datasets import make_sequence_length
+from localized_undo.utils.loss_functions import forward_kl_loss_fn, print_acc, custom_makedirs
+from localized_undo.utils.process_datasets import make_sequence_length
 
 
 

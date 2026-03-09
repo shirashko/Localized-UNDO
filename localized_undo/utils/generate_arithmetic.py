@@ -1,14 +1,9 @@
 import random
 import os
-import torch
-from tqdm import tqdm
-from transformers import AutoTokenizer
-from dotenv import load_dotenv
 import orjson
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.paths import DATASET_DIR
-from utils.template_lists import NAMES, OBJECTS, PLACES, GROUPS, CONTAINERS
+from localized_undo.utils.template_lists import NAMES, OBJECTS, PLACES, GROUPS, CONTAINERS
 
 
 MAX_ADD_SUBTRACT = 50

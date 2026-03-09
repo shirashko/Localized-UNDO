@@ -3,10 +3,8 @@ import random
 import math
 import json
 import torch
-from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader
 from datasets import load_dataset, interleave_datasets
-from accelerate import Accelerator
 from transformers import (
     AutoConfig,
     AutoModelForCausalLM,
@@ -16,8 +14,8 @@ from transformers import (
 import wandb
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.loss_functions import cross_entropy_loss_fn, print_acc, custom_makedirs
-from utils.process_datasets import make_sequence_length
+from localized_undo.utils.loss_functions import cross_entropy_loss_fn, print_acc, custom_makedirs
+from localized_undo.utils.process_datasets import make_sequence_length
 
 def relearn(
     model_name,
