@@ -22,7 +22,7 @@ def relearn(
 
     train_files,
     eval_fn,
-    accelerator, 
+    accelerator,
     join_or_subsequence,
     interleave_probs,
     output_dir,
@@ -46,7 +46,7 @@ def relearn(
     max_length=2048,
 
     use_wandb=False,
-    wandb_project="gemma-2-0.3B-relearn",
+    wandb_project="gemma-2-0.1B-relearn",
     wandb_run_name=None,
 
     use_local_record=True,
@@ -56,9 +56,52 @@ def relearn(
     save_models=True
 ):
     """
-    "Relearning" script that logs CE and PPL during validation.
-    We now load eng_train_file + kor_train_file and optionally interleave them.
-    We also run a final validation step after the loop ends.
+    Executes a controlled training loop to "re-acquire" knowledge in a model.
+
+    This function is designed to measure how efficiently a model can be fine-tuned
+    on specific data. It supports multi-source data interleaving and intensive
+    validation logging (Cross-Entropy and Perplexity) to monitor the recovery of
+    specific capabilities.
+
+    Args:
+        model_name (str): Path to the local model directory or Hugging Face model ID.
+        train_files (list[str]): List of paths to JSONL training data files.
+        eval_fn (callable): A validation function that accepts the model and
+            returns a dictionary of metrics (e.g., accuracy, loss).
+        accelerator (accelerate.Accelerator): Initialized Accelerator for distributed training.
+        join_or_subsequence (bool): If True, joins short examples to reach max_length.
+            If False, filters out examples exceeding max_length.
+        interleave_probs (list[float]): Sampling probabilities for each source in train_files.
+        output_dir (str): Directory where final models and checkpoints will be saved if save_models is True.
+        cache_dir (str): Directory for model/tokenizer binary caching.
+        dataset_cache_dir (str): Directory for processed dataset caching.
+        seed (int): Random seed for reproducibility.
+        device (str): Computation device (default: "cuda").
+        batch_size (int): Training batch size per device.
+        gradient_accumulation_steps (int): Number of steps to accumulate gradients before an optimizer update.
+        epochs (int): Number of full passes over the interleaved dataset.
+        learning_rate (float): Peak learning rate for the scheduler.
+        max_steps (int): Total training steps. If > 0, overrides epoch-based duration.
+        num_warmup_steps (int): Steps for the learning rate warmup phase.
+        validation_steps (int): Frequency of evaluation during training.
+        save_checkpoint_steps (int): Frequency of saving intermediate model weights if save_models is True.
+        scheduler_type (str): Type of LR scheduler ("linear" or "cosine").
+        min_lr (float): The floor for the learning rate decay.
+        weight_decay (float): Weight decay coefficient for AdamW.
+        gradient_clipping_threshold (float): Max norm for gradient clipping.
+        max_length (int): Maximum sequence length for tokenization.
+        use_wandb (bool): Enable Weights & Biases logging.
+        wandb_project (str): W&B project name.
+        wandb_run_name (str): Specific W&B run name.
+        use_local_record (bool): If True, saves JSONL logs to path_local_record.
+        path_local_record (str): File path for local JSONL logging.
+        stopping_strategy (str): Data interleaving strategy ('first_exhausted' or 'all_exhausted').
+        overwrite_ok (bool): If True, allows writing to an existing output_dir.
+        save_models (bool): If True, saves the final model and checkpoints.
+
+    Note:
+        The function performs an initial validation step at step 0 to establish a baseline
+        and a final validation step upon completion or early stopping.
     """
     # --------------------------------------------------
     # Accelerator, logging, seeds

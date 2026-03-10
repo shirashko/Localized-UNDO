@@ -33,10 +33,17 @@ MODELS_TO_RUN = [
 
 
 def launch_relearn_worker(exp_id, all_configs):
+    """
+    Worker function to execute a single relearning experiment.
+    Maps configuration from YAML to the explicit arguments of the relearn function.
+    """
     config = all_configs[exp_id]
     accelerator = Accelerator()
+
+    # Authenticate with WandB and Hugging Face
     custom_login()
 
+    # Initialize the arithmetic evaluation function with dynamic parameters
     eval_fn = get_arithmetic_eval_fn(
         model_name=config['model_name'],
         eng_valid_file=config['eng_valid_file'],
@@ -46,25 +53,58 @@ def launch_relearn_worker(exp_id, all_configs):
         accelerator=accelerator
     )
 
+    # Prepare the list of training files (supports single or dual sources)
     train_files = [config['first_train_file']]
     if config.get('second_train_file'):
         train_files.append(config['second_train_file'])
 
-    # Filter for the core relearn tool
-    exclude = {'first_train_file', 'second_train_file', 'eng_valid_file'}
-    train_params = {k: v for k, v in config.items() if k not in exclude}
-
+    # Explicitly call relearn with parameters mapped from the config dictionary
     relearn(
+        # Model and Data paths
+        model_name=config['model_name'],
         train_files=train_files,
         eval_fn=eval_fn,
         accelerator=accelerator,
-        **train_params
+        output_dir=config['output_dir'],
+        cache_dir=config['cache_dir'],
+        dataset_cache_dir=config['dataset_cache_dir'],
+
+        # Data Processing Strategy
+        join_or_subsequence=config.get('join_or_subsequence', True),
+        interleave_probs=config.get('interleave_probs', [1.0]),
+        max_length=config['max_length'],
+        stopping_strategy=config.get('stopping_strategy', 'first_exhausted'),
+
+        # Optimization Hyperparameters
+        seed=config.get('seed', 42),
+        batch_size=config['batch_size'],
+        gradient_accumulation_steps=config.get('gradient_accumulation_steps', 16),
+        epochs=config.get('epochs', 2),
+        learning_rate=config['learning_rate'],
+        max_steps=config.get('max_steps', -1),
+        num_warmup_steps=config.get('num_warmup_steps', 100),
+        scheduler_type=config.get('scheduler_type', "cosine"),
+        min_lr=config.get('min_lr', 4e-5),
+        weight_decay=config.get('weight_decay', 0.1),
+        gradient_clipping_threshold=config.get('gradient_clipping_threshold', 1.0),
+
+        # Logging and Records
+        use_wandb=config.get('use_wandb', False),
+        wandb_project=config.get('wandb_project', "relearn-project"),
+        wandb_run_name=config.get('wandb_run_name'),
+        use_local_record=config.get('use_local_record', True),
+        path_local_record=config['path_local_record'],
+
+        # Execution Settings
+        overwrite_ok=config.get('overwrite_ok', False),
+        save_models=config.get('save_models', True),
+        save_checkpoint_steps=config.get('save_checkpoint_steps', 1500)
     )
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--setups", nargs='+', default=["gemma-2-0.3B_all_data"], help="List of setup IDs from YAML")
+    parser.add_argument("--setups", nargs='+', default=["gemma-2-0.1B_all_data"], help="List of setup IDs from YAML")
     args = parser.parse_args()
 
     yaml_path = CONFIG_DIR / "arithmetic" / "relearn.yaml"

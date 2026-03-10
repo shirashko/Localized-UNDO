@@ -87,7 +87,7 @@ def load_distill_configs(yaml_path, setup_id):
 
                 # Path Naming
                 path_suffix = f"-alpha_{alpha}-beta_{beta}-seed_{seed}"
-                base_name = f"gemma-2-0.3B_{method}-arithmetic-partial_distill"
+                base_name = f"gemma-2-0.1B_{method}-arithmetic-partial_distill"
 
                 config['output_dir'] = str(MODEL_DIR / "partial_distill_models_arith" / f"{base_name}{path_suffix}")
                 config['path_local_record'] = str(
@@ -114,32 +114,35 @@ def load_unlearn_configs(yaml_path, base_setup_ids):
 
     expanded_setups = {}
     for base_id in base_setup_ids:
-        base_cfg = data['default_config'].copy()
-        base_cfg.update(data['setups'][base_id])
+        # Load defaults then override with specific setup
+        config_template = data['default_config'].copy()
+        config_template.update(data['setups'][base_id])
 
-        method = base_cfg['method']
+        method = config_template['method']
         lr_range = data['lr_ranges'][method]
 
         for lr in lr_range:
-            # FIX: Explicitly cast to float to handle string parsing from YAML
             lr_val = float(lr)
+            # Create a unique ID for this specific LR variant
             setup_id = f"{base_id}_lr_{lr_val:.1e}"
 
-            config = base_cfg.copy()
+            config = config_template.copy()
             config['learning_rate'] = lr_val
-            config['min_lr'] = lr_val
 
-            # Dynamic path construction (Ensuring consistency with your previous scripts)
+            # Use paths from YAML/Paths.py instead of hard-coded strings
+            # Note: We assume these keys exist in your YAML 'setups' or 'default_config'
+            config['model_name'] = str(MODEL_DIR / config['model_rel_path'])
+            config['forget_train_file'] = str(DATASET_DIR / config['forget_rel_path'])
+            config['retain_train_file'] = str(DATASET_DIR / config['retain_rel_path'])
+            config['eng_valid_file'] = str(DATASET_DIR / config['valid_rel_path'])
+
+            # Construct output directories dynamically
             method_dir = config['method']
-            config['model_name'] = str(MODEL_DIR / "pretrained_models/gemma-2-0.3B_all_arithmetic+eng/final_model")
-            config['forget_train_file'] = str(DATASET_DIR / "pretrain/train_multiplication_division.jsonl")
-            config['retain_train_file'] = str(DATASET_DIR / "pretrain/train_addition_subtraction.jsonl")
-            config['eng_valid_file'] = str(DATASET_DIR / "pretrain/valid_eng.jsonl")
-
+            model_slug = config['model_rel_path'].replace('/', '_')
             config['output_dir'] = str(
-                MODEL_DIR / f"unlearned_models/{method_dir}/gemma-2-0.3B_all_arithmetic+eng_lr_{lr_val:.1e}")
+                MODEL_DIR / f"unlearned_models/{method_dir}/{model_slug}_lr_{lr_val:.1e}")
             config['path_local_record'] = str(
-                MODEL_DIR / f"local_records/unlearned_models/{method_dir}/gemma-2-0.3B_all_arithmetic+eng_lr_{lr_val:.1e}.txt")
+                MODEL_DIR / f"local_records/unlearned_models/{method_dir}/{model_slug}_lr_{lr_val:.1e}.txt")
 
             config['cache_dir'] = str(CACHE_DIR)
             config['dataset_cache_dir'] = str(CACHE_DIR)

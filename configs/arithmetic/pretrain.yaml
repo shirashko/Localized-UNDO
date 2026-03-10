@@ -31,18 +31,3 @@ setups:
     batch_size: 5
     gradient_accumulation_steps: 72
     interleave_probs: [0.875, 0.125]
-
-  # --- Models 0.3B ---
-  gemma-2-0.3B_all_arithmetic+eng:
-    model_id: "gemma-2-0.3B"
-    arithmetic_type: "all_arithmetic"
-    batch_size: 15
-    gradient_accumulation_steps: 24
-    interleave_probs: [0.75, 0.25]
-
-  gemma-2-0.3B_addition_subtraction+eng:
-    model_id: "gemma-2-0.3B"
-    arithmetic_type: "addition_subtraction"
-    batch_size: 15
-    gradient_accumulation_steps: 24
-    interleave_probs: [0.875, 0.125]

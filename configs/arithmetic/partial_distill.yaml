@@ -33,8 +33,8 @@ sweeps:
   seeds: [111, 222, 333, 444, 555]
 
 setups:
-  gemma-2-0.3B_MaxEnt:
+  gemma-2-0.1B_MaxEnt:
     method: "MaxEnt"
     # Pointing to the final_model from the Unlearning stage
-    teacher_rel_path: "unlearned_models/MaxEnt/gemma-2-0.3B_all_arithmetic+eng_lr_9.0e-05/final_model"
-    wandb_project: "gemma-2-0.3B_all_arithmetic+eng_sp_distill"
+    teacher_rel_path: "unlearned_models/MaxEnt/gemma-2-0.1B_all_arithmetic+eng_lr_7.0e-05/final_model"
+    wandb_project: "gemma-2-0.1B_all_arithmetic+eng_sp_distill"

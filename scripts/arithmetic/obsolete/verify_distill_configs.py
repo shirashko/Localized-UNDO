@@ -35,7 +35,7 @@ class TestDistillConfigParity(unittest.TestCase):
 
         # 2. Get NEW configs from the YAML handler
         from localized_undo.utils.config_handler import load_distill_configs
-        yaml_path = PROJECT_ROOT / "configs" / "arithmetic" / "distill.yaml"
+        yaml_path = PROJECT_ROOT / "configs" / "arithmetic" / "partial_distill.yaml"
         new_configs_dict = load_distill_configs(yaml_path, setup_id)
 
         # 3. Strict Comparison

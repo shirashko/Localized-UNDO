@@ -12,41 +12,19 @@ default_config:
   max_length: 256
   use_wandb: true
   use_local_record: true
+  forget_rel_path: "pretrain/train_multiplication_division.jsonl"
+  retain_rel_path: "pretrain/train_addition_subtraction.jsonl"
+  valid_rel_path: "pretrain/valid_eng.jsonl"
 
-# Learning rate ranges per method
 lr_ranges:
-  GradDiff: [6e-6, 7e-6, 8e-6, 9e-6, 1e-5, 2e-5, 3e-5, 4e-5]
   MaxEnt: [6e-5, 7e-5, 8e-5, 9e-5, 1e-4, 2e-4, 3e-4, 4e-4]
-  RMU: [6e-6, 7e-6, 8e-6, 9e-6, 1e-5, 2e-5, 3e-5, 4e-5]
 
 setups:
-  gemma-2-0.3B_GradDiff:
-    method: "GradDiff"
-    ga_gd: true
-    alpha: 15
-    batch_size: 20
-    gradient_accumulation_steps: 2
-    min_lr: 4e-5
-    wandb_project: "gemma-2-0.3B_all_arithmetic+eng_unlearn_GradDiff"
-
-  gemma-2-0.3B_MaxEnt:
+  gemma-2-0.1B_MaxEnt:
     method: "MaxEnt"
     use_retain: true
-    batch_size: 40
-    gradient_accumulation_steps: 1
+    batch_size: 4
+    gradient_accumulation_steps: 10
     min_lr: 4e-5
-    wandb_project: "gemma-2-0.3B_all_arithmetic+eng_unlearn_MaxEnt"
-
-  gemma-2-0.3B_RMU:
-    method: "RMU"
-    ga_gd: false
-    rmu_layers: [5, 6, 7, 8, 9, 10, 11]
-    end_layer: 11
-    alpha: 200
-    c: 6
-    batch_size: 40
-    gradient_accumulation_steps: 1
-    max_steps: 500
-    validation_steps: 10
-    min_lr: 6e-6
-    wandb_project: "gemma-2-0.3B_all_arithmetic+eng_unlearn_RMU"
+    wandb_project: "gemma-2-0.1B_all_arithmetic+eng_unlearn_MaxEnt"
+    model_rel_path: "pretrained_models/gemma-2-0.1B_all_arithmetic+eng/final_model"

@@ -8,7 +8,7 @@ from localized_undo.utils.validation_functions import get_arithmetic_eval_fn
 from localized_undo.utils.parallel_launch import launch_in_parallel_one_per_gpu, get_parallel_launch_wrapper
 
 # Define which base methods we want to sweep
-BASE_SETUPS_TO_RUN = ["gemma-2-0.3B_MaxEnt", "gemma-2-0.3B_RMU"]
+BASE_SETUPS_TO_RUN = ["gemma-2-0.1B_MaxEnt"]
 
 # Load expanded setups from YAML
 yaml_path = CONFIG_DIR / "arithmetic" / "unlearn.yaml"

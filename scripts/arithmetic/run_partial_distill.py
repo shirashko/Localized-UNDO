@@ -110,7 +110,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # 1. Locate YAML file
-    yaml_path = CONFIG_DIR / "arithmetic" / "distill.yaml"
+    yaml_path = CONFIG_DIR / "arithmetic" / "partial_distill.yaml"
 
     # 2. Load and expand configurations for the selected setup
     try:
