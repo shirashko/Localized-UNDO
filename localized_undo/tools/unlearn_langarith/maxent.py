@@ -26,6 +26,7 @@ from localized_undo.utils.repnoise_loss import rep_noise_loss, register_activati
 # Import SAM utilities
 from localized_undo.utils.sam_utils import compute_sam_perturbation, apply_perturbation
 
+
 def unlearn_maxent(
     model_name,
     forget_train_file,
@@ -36,9 +37,7 @@ def unlearn_maxent(
     cache_dir,
     dataset_cache_dir,
     join_or_subsequence,
-
     use_retain,
-    
     seed,
     device,
     batch_size,
@@ -54,38 +53,69 @@ def unlearn_maxent(
     weight_decay,
     gradient_clipping_threshold,
     max_length,
-
     use_wandb,
     wandb_project,
     wandb_run_name,
     wandb_api_key,
-
     use_local_record,
     path_local_record,
-
-    # Add balance_alpha parameter to control the forget-retain trade-off for maxent
     balance_alpha=1.0,
-
-    # RepNoise parameters
-    use_repnoise=False,         # Option to turn RepNoise on/off
-    repnoise_beta=0.001,        # Beta parameter for RepNoise loss
-    repnoise_alpha=1.0,         # Alpha parameter for RepNoise loss
-    
-    # SAM parameters
-    use_sam=False,              # Option to turn SAM on/off
-    sam_rho=0.05,               # Rho parameter (perturbation size) for SAM
+    use_repnoise=False,
+    repnoise_beta=0.001,
+    repnoise_alpha=1.0,
+    use_sam=False,
+    sam_rho=0.05,
 ):
     """
-    Uniform Forget script using Accelerate on pretokenized JSONL datasets.
-    
-    - "Forget" dataset => uniform_forget_loss_fn, i.e., push model logits to uniform 
-      via forward KL with teacher_logits=ones.
-    - "Retain" dataset (if use_retain=True) => normal cross-entropy (to preserve knowledge).
-    - RepNoise (if use_repnoise=True) => adds representation noising for more robust unlearning.
-    - SAM (if use_sam=True) => Sharpness-Aware Minimization for more robust unlearning.
-    - balance_alpha => Controls the balance between forget and retain losses.
-                      Higher values emphasize retain loss, lower values emphasize forget loss.
-                      Set to 0 to completely ignore retain loss.
+    Maximum Entropy (MaxEnt) Unlearning with integrated SAM and RepNoise.
+
+    This function executes a specialized unlearning protocol designed to neutralize
+    target knowledge (Forget Set) via a Forward KL-Divergence objective toward a
+    uniform distribution, while regularizing performance on a Retain Set.
+
+    Args:
+        model_name (str): Identifier for the model (local path or Hugging Face ID).
+        forget_train_file (str): Path to JSONL data for the knowledge to be erased.
+        retain_train_file (str): Path to JSONL data for the knowledge to be preserved.
+        eval_fn (callable): Function returning a metric dictionary for periodic monitoring.
+        accelerator (Accelerator): Accelerate instance managing distributed training.
+        output_dir (str): Directory where the final unlearned model will be exported.
+        cache_dir (str): Directory for caching model and tokenizer weights.
+        dataset_cache_dir (str): Directory for caching processed Arrow datasets.
+        join_or_subsequence (bool): If True, packs samples into full-length windows;
+            if False, filters samples exceeding max_length.
+        use_retain (bool): Global toggle to include the retain loss in optimization.
+        seed (int): Random seed for reproducibility across sampling and initialization.
+        device (str): Compute device specification (e.g., "cuda", "cpu").
+        batch_size (int): Local batch size for each processing device.
+        gradient_accumulation_steps (int): Number of forward/backward passes before an update.
+        epochs (int): Number of full iterations through the training data.
+        learning_rate (float): Peak learning rate for the optimization schedule.
+        max_steps (int): Absolute limit for training steps (overrides epochs if reached).
+        num_warmup_steps (int): Steps dedicated to linear learning rate warmup.
+        validation_steps (int): Frequency (in global steps) of the evaluation routine.
+        save_checkpoint_steps (int): Frequency of saving intermediate model states.
+        scheduler_type (str): LR decay strategy ("linear" or "cosine").
+        min_lr (float): The final/minimum learning rate reached during decay.
+        weight_decay (float): L2 regularization coefficient for AdamW.
+        gradient_clipping_threshold (float): Max gradient norm for clipping.
+        max_length (int): The model's context window limit for tokenized sequences.
+        use_wandb (bool): Enable Weights & Biases logging.
+        wandb_project (str): W&B project identifier.
+        wandb_run_name (str): Specific name for this experimental run.
+        wandb_api_key (str): Authentication key for W&B login.
+        use_local_record (bool): If True, logs metrics to a local JSONL file.
+        path_local_record (str): File path destination for local logs.
+        balance_alpha (float): Scalar $\alpha$ weighting the retain loss.
+            $TotalLoss = L_{forget} + \alpha \cdot L_{retain}$.
+        use_repnoise (bool): Enable Representation Noising (RepNoise) to disrupt
+            activations using MMD loss.
+        repnoise_beta/alpha (float): Hyperparameters for the RepNoise penalty term.
+        use_sam (bool): Enable Sharpness-Aware Minimization for flat minima search.
+        sam_rho (float): Neighborhood size $\rho$ for the SAM adversarial perturbation.
+
+    Returns:
+        None. The function exports the final model to 'output_dir/final_model'.
     """
     accelerator = Accelerator()
     print_message = accelerator.is_main_process
