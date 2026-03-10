@@ -2,11 +2,9 @@ import os
 import random
 import math
 import json
-
 import torch
 from torch.utils.data import DataLoader
 from datasets import load_dataset, interleave_datasets
-from accelerate import Accelerator
 from transformers import (
     AutoConfig,
     AutoModelForCausalLM,
@@ -61,7 +59,9 @@ def partial_distill(
     overwrite_ok,
     noise_alpha=0.0,
     noise_beta=0.0,
-    shrink_perturb_repeat=False,  
+    shrink_perturb_repeat=False,
+
+    noise_mask=None,
 ):
     """
     Distillation script using Accelerate. Replaces standard CE with forward KL (KL(teacher||student)).
@@ -250,7 +250,7 @@ def partial_distill(
 
         if shrink_perturb_repeat and noise_alpha != 0.0:
             print_acc(f"[serum_original.py] Re-applying shrink+perturb before epoch {epoch+1}", print_message)
-            do_corruption(student_model, noise_alpha, noise_beta)
+            do_corruption(student_model, noise_alpha, noise_beta, noise_mask)
 
         student_model.train()
         micro_kd_sum = 0.0
@@ -378,27 +378,82 @@ def partial_distill(
 # The do_corruption function is used for "noise-and-decay"
 ##############################################################
 
-def do_corruption(model, noise_alpha, noise_beta = 0.1, seed = 42):
-    # Loop through all parameters and add random noise scaled by scale factor
+def do_corruption(model, noise_alpha, noise_beta=0.1, seed=42, noise_mask=None):
+    """
+        Applies noise corruption to model parameters, optionally using a weight-level mask.
+
+        Args:
+            model: The torch model to corrupt.
+            noise_alpha (float): Global scaling factor for the corruption.
+                Final weight is calculated as: W_new = (1 - effective_alpha)*W_old + effective_alpha*Noise.
+            noise_beta (float): Magnitude/Standard Deviation factor for the generated noise.
+            seed (int): Seed for reproducible noise generation across different experimental runs.
+            noise_mask (dict, optional):
+                A dictionary defining a localized weight-level importance map.
+
+                Expected Structure:
+                - Keys (str): The 'clean' parameter names (e.g., 'layers.5.self_attn.q_proj.weight').
+                  The function automatically handles 'module.' or 'student_model.' prefixes.
+                - Values (torch.Tensor): A tensor with the EXACT same shape as the corresponding
+                  parameter in the model.
+
+                Mask Values Interpretation (0.0 to 1.0):
+                - 1.0: Full corruption is applied to this specific weight using the global noise_alpha.
+                - 0.0: No corruption is applied, the weight remains at its original value.
+                - 0.0 < m < 1.0: Partial corruption, where the noise_alpha is scaled by the mask value.
+
+                If None: Performs global corruption, applying noise_alpha to every trainable parameter.
+        """
     assert 0 <= noise_alpha <= 1
     assert 0 <= noise_beta <= 1
 
-    for param in model.parameters():
-        if param.requires_grad:
-            corruption = torch.zeros_like(param.data)
-            if len(param.data.shape) == 2:
-                noise = torch.nn.init.xavier_uniform_(
-                    torch.empty_like(param.data)
-                )
-            elif len(param.data.shape) == 1:
-                noise = torch.zeros_like(param.data)
+    # Set seed for reproducible noise generation across different experiments
+    torch.manual_seed(seed)
+
+    # Tracking for research logging
+    count_corrupted = 0
+    total_trainable = 0
+
+    for name, param in model.named_parameters():
+        if not param.requires_grad:
+            continue
+
+        total_trainable += 1
+
+        # Clean the name to handle DistributedDataParallel (module.) or student wrappers
+        clean_name = name.replace("module.", "").replace("student_model.", "")
+
+        # Determine if we should apply noise:
+        # 1. Global case (noise_mask is None)
+        # 2. Localized case (noise_mask is a dict and name is present)
+        is_in_mask = (noise_mask is None) or (isinstance(noise_mask, dict) and clean_name in noise_mask)
+
+        if is_in_mask:
+            count_corrupted += 1
+
+            # Generate corruption noise based on parameter dimensionality
+            if len(param.data.shape) >= 2:
+                # Use Xavier Uniform for weight matrices
+                noise = torch.nn.init.xavier_uniform_(torch.empty_like(param.data))
             else:
-                raise RuntimeError(
-                    f"Unsupported parameter shape: {param.data.shape}"
-                )
+                # For 1D parameters (biases, norms), we typically use zeros (no noise)
+                noise = torch.zeros_like(param.data)
+
             corruption = noise_beta * noise
 
-            param.data = (1 - noise_alpha) * param.data + noise_alpha * corruption
+            # Calculate effective alpha:
+            # If it's a dict, use the tensor mask value to scale alpha at the weight level.
+            if isinstance(noise_mask, dict) and clean_name in noise_mask:
+                m = noise_mask[clean_name].to(param.device)
+                effective_alpha = noise_alpha * m
+            else:
+                effective_alpha = noise_alpha
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+            # Apply the corruption formula: W_new = (1 - alpha) * W_old + alpha * Noise
+            param.data = (1 - effective_alpha) * param.data + effective_alpha * corruption
+
+    # Ensure model stays on its original device
+    device = next(model.parameters()).device
     model.to(device)
+
+    print(f"[DEBUG] Applied corruption to {count_corrupted} parameters (Total trainable: {total_trainable}).")

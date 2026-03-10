@@ -18,6 +18,7 @@ default_config:
   use_wandb: true
   use_local_record: true
   shrink_perturb_repeat: false
+  noise_mask_rel_path: null
 
 # Early stopping configuration
 stopping_criteria:
@@ -38,3 +39,4 @@ setups:
     # Pointing to the final_model from the Unlearning stage
     teacher_rel_path: "unlearned_models/MaxEnt/gemma-2-0.1B_all_arithmetic+eng_lr_7.0e-05/final_model"
     wandb_project: "gemma-2-0.1B_all_arithmetic+eng_sp_distill"
+#    noise_mask_rel_path: "localization_masks/arithmetic_mask.pt"

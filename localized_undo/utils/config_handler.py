@@ -1,5 +1,6 @@
 import yaml
 from localized_undo.utils.paths import MODEL_DIR, DATASET_DIR, CACHE_DIR
+import torch
 
 
 def load_relearn_configs(yaml_path, setup_ids, models_to_run):
@@ -101,6 +102,14 @@ def load_distill_configs(yaml_path, setup_id):
 
                 config['cache_dir'] = str(CACHE_DIR)
                 config['dataset_cache_dir'] = str(CACHE_DIR)
+
+                mask_path = config.get('noise_mask_rel_path')
+                if mask_path:
+                    full_mask_path = MODEL_DIR / mask_path
+                    # Loading the mask (expecting a Dict of Tensors)
+                    config['noise_mask'] = torch.load(full_mask_path, map_location='cpu')
+                else:
+                    config['noise_mask'] = None
 
                 exp_id = f"{setup_id}_a{alpha}_b{beta}_s{seed}"
                 expanded_experiments[exp_id] = config

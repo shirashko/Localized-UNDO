@@ -88,7 +88,7 @@ def launch_worker(exp_id, all_configs):
     exclude = {
         'method', 'teacher_rel_path', 'stop_condition',
         'english_threshold', 'retain_arithmetic_threshold',
-        'forget_arithmetic_threshold', 'arithmetic_train_file', 'eng_train_file'
+        'forget_arithmetic_threshold', 'arithmetic_train_file', 'eng_train_file', 'noise_mask_rel_path'
     }
     train_params = {k: v for k, v in config.items() if k not in exclude}
 
@@ -100,6 +100,7 @@ def launch_worker(exp_id, all_configs):
         train_files=[config['eng_train_file'], config['arithmetic_train_file']],
         overwrite_ok=True,
         stopping_strategy='first_exhausted',
+        noise_mask=config.get('noise_mask'),
         **train_params
     )
 
