@@ -1,7 +1,7 @@
 default_config:
   seed: 42
-  batch_size: 15
-  gradient_accumulation_steps: 1
+  batch_size: 3
+  gradient_accumulation_steps: 5
   epochs: 1
   max_steps: 500
   num_warmup_steps: 1
