@@ -12,8 +12,8 @@ custom_login()
 
 # The models you want to evaluate relearning for
 MODELS_TO_RUN = [
-    #'pretrained_models/gemma-2-0.3B_addition_subtraction+eng', # Pretrain Pure
-    #'pretrained_models/gemma-2-0.3B_all_arithmetic+eng', # Pretrained Base
+    'pretrained_models/gemma-2-0.3B_addition_subtraction+eng', # Pretrain Pure
+    'pretrained_models/gemma-2-0.3B_all_arithmetic+eng', # Pretrained Base
     #'unlearned_models/MaxEnt/gemma-2-0.3B_all_arithmetic+eng_lr_9.0e-05', # Unlearned MaxEnt
 
     #'distilled_models/pure/gemma-2-0.3B_all_arithmetic+eng', # Distilled Pure (Oracle)
@@ -91,7 +91,7 @@ def launch_relearn_worker(exp_id, all_configs):
 
         # Logging and Persistence
         use_wandb=config.get('use_wandb', False),
-        wandb_project=config.get('wandb_project', "relearn-project"),
+        wandb_project=config['wandb_project'],
         wandb_run_name=config.get('wandb_run_name'),
         use_local_record=config.get('use_local_record', True),
         path_local_record=config['path_local_record'],
