@@ -1,7 +1,7 @@
 default_config:
   seed: 42
-  batch_size: 15
-  gradient_accumulation_steps: 24
+  batch_size: 3
+  gradient_accumulation_steps: 120
   epochs: 1
   learning_rate: 0.0007
   max_steps: 1000
