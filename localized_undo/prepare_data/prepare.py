@@ -343,9 +343,9 @@ def main():
     for file_name in ['wmdp-cyber-forget-corpus', 'wmdp-cyber-retain-corpus', 'wmdp-bio_retain_dataset',
                       'wmdp-bio_remove_dataset', "wmdp-wikipedia"]:
         if 'cyber' in file_name:
-            data_file = DATASET_DIR + f"/eric-wmdp-data/{file_name}.jsonl"
+            data_file = DATASET_DIR / f"eric-wmdp-data/{file_name}.jsonl"
         else:
-            data_file = f"{DATASET_DIR}/wmdp/qa/{file_name}-combined.jsonl"
+            data_file = DATASET_DIR / f"wmdp/qa/{file_name}-combined.jsonl"
 
         data_train_out = os.path.join(OUT_DIR, f"train_{file_name}_qa.jsonl")
         data_valid_out = os.path.join(OUT_DIR, f"valid_{file_name}_qa.jsonl")
@@ -397,7 +397,7 @@ def main():
     for file_name in ['cyber-retain-corpus', 'cyber-forget-corpus', 'bio_remove_dataset', 'bio_retain_dataset']:
         wmdp_train_out = os.path.join(OUT_DIR, f"train_{file_name}.jsonl")
         wmdp_valid_out = os.path.join(OUT_DIR, f"valid_{file_name}.jsonl")
-        wmdp_file = DATASET_DIR + f"/wmdp/{file_name}.jsonl"
+        wmdp_file = DATASET_DIR / f"wmdp/{file_name}.jsonl"
 
         if os.path.exists(wmdp_file) and not os.path.exists(wmdp_train_out):
             print(f"Building {file_name} dataset...", flush=True)
