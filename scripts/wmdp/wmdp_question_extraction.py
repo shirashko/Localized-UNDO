@@ -22,13 +22,15 @@ from pydantic import BaseModel, Field
 
 from transformers import AutoTokenizer
 from localized_undo.utils.paths import DATASET_DIR
+import random
 
 
 PROMPT_TYPE = 'wikipedia'
 
 gemini_model_name = 'gemini-2.0-flash'
 def mk_gemini_client():
-    GEMINI_TOKEN_PATH = "tokens/gemini_token.txt"
+    root_dir = Path(__file__).resolve().parents[2]
+    GEMINI_TOKEN_PATH = root_dir / "tokens" / "gemini_token.txt"
     with open(GEMINI_TOKEN_PATH, "r", encoding="utf-8") as f:
         token = f.read().strip()
     client = genai.Client(api_key=token)
