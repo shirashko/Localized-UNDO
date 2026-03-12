@@ -14,6 +14,12 @@
 #SBATCH --mail-user=rashkovits@mail.tau.ac.il
 #SBATCH --mail-type=BEGIN,END,FAIL
 
+# --- Variables ---
+# Switch to run the different setups
+# 1. gemma-2-0.1B_all_arithmetic+eng
+# 2. gemma-2-0.1B_addition_subtraction+eng
+SETUP_ID="gemma-2-0.1B_all_arithmetic+eng"
+
 # --- Environment Setup ---
 source ~/.bashrc
 conda activate undo
@@ -23,8 +29,9 @@ cd /home/morg/students/rashkovits/Localized-UNDO
 mkdir -p logs
 
 # --- Execute Training ---
-# This line will print the GPU model to the log file to verify it
 echo "Starting Job on Node: $SLURMD_NODENAME"
+echo "Running Setup: $SETUP_ID"
+
 nvidia-smi --query-gpu=name --format=csv,noheader
 
-accelerate launch scripts/arithmetic/run_pretrain.py --setup gemma-2-0.1B_all_arithmetic+eng
+accelerate launch scripts/arithmetic/run_pretrain.py --setup "$SETUP_ID"
