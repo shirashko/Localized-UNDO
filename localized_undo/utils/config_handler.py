@@ -184,6 +184,5 @@ def load_pretrain_config(yaml_path, setup_id):
 
     config['cache_dir'] = str(CACHE_DIR)
     config['dataset_cache_dir'] = str(CACHE_DIR)
-    config['wandb_project'] = setup_id
 
     return config
