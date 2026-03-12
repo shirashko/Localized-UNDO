@@ -156,11 +156,8 @@ def get_arithmetic_eval_fn(
     print_acc(f"[validation_functions.py] Eng validation dataset size: {len(eng_valid_ds)}", print_message)
     eng_valid_ds = eng_valid_ds.remove_columns("text")
     eng_valid_ds = eng_valid_ds.map(
-        lambda examples: {
-            "input_ids": [ids[:max_length] for ids in examples["input_ids"]],
-            "attention_mask": [mask[:max_length] for mask in examples["attention_mask"]],
-        },
-        batched=True
+        lambda x: {k: v[:max_length] if isinstance(v, list) else v for k, v in x.items()},
+        batched=False
     )
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer, padding="max_length", max_length=max_length)
     eng_valid_loader = DataLoader(eng_valid_ds, batch_size=batch_size, shuffle=False, collate_fn=data_collator)

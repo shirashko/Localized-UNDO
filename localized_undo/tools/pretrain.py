@@ -94,16 +94,20 @@ def train(
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token_id = tokenizer.eos_token_id
 
-
-
     # ----------------------------------------------------------------
     # Load training datasets
     # ----------------------------------------------------------------
     train_ds_list = []
     for file in train_files:
         print_acc(f"[pretrain.py] Loading train dataset from {file}", print_message)
-        train_ds = load_dataset("json", data_files=file, split="train", cache_dir=dataset_cache_dir)
-        train_ds_list.append(train_ds)
+        ds = load_dataset("json", data_files=file, split="train", cache_dir=dataset_cache_dir)
+
+        ds = ds.map(
+            lambda x: {k: v[:max_length] if isinstance(v, list) else v for k, v in x.items()},
+            batched=False
+        )
+
+        train_ds_list.append(ds)
    
     # If join_or_subsequence, form sequences of exactly max_length 
     # by joining multiple or using subsequences
