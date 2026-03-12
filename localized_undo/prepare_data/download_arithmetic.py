@@ -1,4 +1,3 @@
-
 import os
 import orjson
 import sys
@@ -7,26 +6,54 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from localized_undo.utils.paths import DATASET_DIR
 from localized_undo.utils.generate_arithmetic import get_equations, get_template_word_problems
 
-SEED=99
-def generate_and_save(operations, amount, output_path):
-    eq = get_equations(operations=operations, seed=SEED, amount=amount, val=False)
-    wp = get_template_word_problems(operations=operations, seed=SEED, amount=amount, val=False)
+ARITH_DIR = DATASET_DIR / "arithmetic"
+SEED = 99
+
+
+def generate_and_save(operations, samples_per_type, output_path):
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    # Calculate total for clearer logging
+    total_expected = samples_per_type * 2
+    print(f"\nGenerating {total_expected} total examples ({samples_per_type} equations + {samples_per_type} word problems) for: {operations}")
+
+    # Generate equations and word problems
+    equation_samples = get_equations(operations=operations, seed=SEED, amount=samples_per_type, val=False)
+    word_problem_samples = get_template_word_problems(operations=operations, seed=SEED, amount=samples_per_type, val=False)
+
+    # Shuffle everything together
     random.seed(SEED)
-    all_elements = list(eq + wp)
+    all_elements = list(equation_samples + word_problem_samples)
     random.shuffle(all_elements)
-    # eq_string = "\n".join(all_elements)
-    # data_dict = {"text": eq_string}
+
+    # Save to JSONL format
     with open(output_path, "wb") as f:
-        for element in all_elements:
+        for i, element in enumerate(all_elements):
             data_dict = {"text": element}
-            print(data_dict)
             serialized_data = orjson.dumps(data_dict) + b"\n"
             f.write(serialized_data)
-        # serialized_data = orjson.dumps(data_dict)
-        # f.write(serialized_data)
-    print(f"Saved to {output_path}")
 
+            # Progress tracking: print every 100,000 lines to avoid log flooding
+            if (i + 1) % 100000 == 0:
+                print(f"  > Progress: {i + 1} / {len(all_elements)} lines written...")
 
-generate_and_save(operations=['addition', 'subtraction', 'multiplication', 'division'], amount=1_000_000, output_path=DATASET_DIR + '/arithmetic/all_arithmetic.jsonl')
-generate_and_save(operations=['addition', 'subtraction'], amount=500_000, output_path=DATASET_DIR + '/arithmetic/addition_subtraction.jsonl')
-generate_and_save(operations=['multiplication', 'division'], amount=500_000, output_path=DATASET_DIR + '/arithmetic/multiplication_division.jsonl')
+    print(f"Successfully finished. Saved to: {output_path}")
+
+# Generate the three required arithmetic datasets
+generate_and_save(
+    operations=['addition', 'subtraction', 'multiplication', 'division'],
+    samples_per_type=1_000_000,
+    output_path=str(ARITH_DIR / 'all_arithmetic.jsonl')
+)
+
+generate_and_save(
+    operations=['addition', 'subtraction'],
+    samples_per_type=500_000,
+    output_path=str(ARITH_DIR / 'addition_subtraction.jsonl')
+)
+
+generate_and_save(
+    operations=['multiplication', 'division'],
+    samples_per_type=500_000,
+    output_path=str(ARITH_DIR / 'multiplication_division.jsonl')
+)
