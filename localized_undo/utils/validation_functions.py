@@ -121,14 +121,14 @@ def evaluate_ce_loss(model, data_loader, pad_token_id, accelerator, fn_only=Fals
 
 
 def get_arithmetic_eval_fn(
-    model_name,
-    batch_size,
-    max_length,
-    cache_dir,
-    dataset_cache_dir,
-    num_wiki_batches,
-    eng_valid_file,
-    accelerator
+        model_name,
+        batch_size,
+        max_length,
+        cache_dir,
+        dataset_cache_dir,
+        num_wiki_batches,
+        eng_valid_file,
+        accelerator
 ):
     tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=cache_dir)
     if tokenizer.pad_token_id is None:
@@ -136,7 +136,7 @@ def get_arithmetic_eval_fn(
 
     def tokenize_prompts(data):
         new_data = []
-        for prompt, ans in data: 
+        for prompt, ans in data:
             inputs = tokenizer(prompt, return_tensors="pt")
             new_data.append((inputs, ans))
         return new_data
@@ -155,19 +155,32 @@ def get_arithmetic_eval_fn(
     print_message = accelerator.is_main_process
     print_acc(f"[validation_functions.py] Eng validation dataset size: {len(eng_valid_ds)}", print_message)
     eng_valid_ds = eng_valid_ds.remove_columns("text")
-    eng_valid_ds = eng_valid_ds.map(
-        lambda x: {k: v[:max_length] if isinstance(v, list) else v for k, v in x.items()},
-        batched=False
-    )
+
+    # Explicitly pad and truncate ALL sequences, including loss_mask
+    def pad_and_truncate(example):
+        for key in ["input_ids", "attention_mask", "loss_mask"]:
+            if key in example and isinstance(example[key], list):
+                # 1. Truncate
+                example[key] = example[key][:max_length]
+
+                # 2. Pad
+                if len(example[key]) < max_length:
+                    padding_length = max_length - len(example[key])
+                    if key == "input_ids":
+                        example[key] += [tokenizer.pad_token_id] * padding_length
+                    else:
+                        # attention_mask and loss_mask get 0 padding
+                        example[key] += [0] * padding_length
+        return example
+
+    # Apply the fix
+    eng_valid_ds = eng_valid_ds.map(pad_and_truncate, batched=False)
+
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer, padding="max_length", max_length=max_length)
     eng_valid_loader = DataLoader(eng_valid_ds, batch_size=batch_size, shuffle=False, collate_fn=data_collator)
-    eng_valid_loader = accelerator.prepare(
-        eng_valid_loader
-    )
-
+    eng_valid_loader = accelerator.prepare(eng_valid_loader)
 
     def do_arithmetic_eval(model, tokenizer, data):
-        # Get the actual model if it's wrapped in DDP or any other wrapper
         if hasattr(model, 'module'):
             generation_model = model.module
         else:
@@ -176,7 +189,7 @@ def get_arithmetic_eval_fn(
         num_correct_by_max = 0
         for prompt, ans in data:
             inputs = prompt.to(model.device)
-            with torch.no_grad(): # Generate next 4 tokens
+            with torch.no_grad():
                 outputs = generation_model.generate(
                     **inputs,
                     max_new_tokens=4,
@@ -184,32 +197,32 @@ def get_arithmetic_eval_fn(
                     pad_token_id=tokenizer.pad_token_id,
                 )
 
-            generated = outputs[0][inputs["input_ids"].shape[1] :]
+            generated = outputs[0][inputs["input_ids"].shape[1]:]
             pred = tokenizer.decode(generated, skip_special_tokens=False).strip()
             pred = re.split(r'\s+|<bos>', pred)[0] if pred else pred
-            input_text = tokenizer.decode(inputs["input_ids"][0], skip_special_tokens=False).strip()
-            try: # Check if prediction matches answer
+            try:
                 pred_num = float(pred)
                 if abs(pred_num - ans) < 1e-6:
                     num_correct_by_max += 1
             except:
                 pass
 
-        absolute_percent = num_correct_by_max / float(len(data))
-        return absolute_percent
+        return num_correct_by_max / float(len(data))
 
     def arithmetic_eval(model, eng_valid_loader, tokenizer, accelerator, print_results):
         start_time = time.time()
+        # Evaluate CE Loss (The part that was crashing)
         wiki_loss = evaluate_ce_loss(model, eng_valid_loader, tokenizer.pad_token_id, accelerator, fn_only=True)
-        eval_dict = {}
 
+        eval_dict = {}
         eval_dict["val/eng_ce_loss"] = wiki_loss
         eval_dict["val/wiki_eval_time"] = time.time() - start_time
+
         start_time = time.time()
         for operation, data in eval_data.items():
-            acc = do_arithmetic_eval(model, tokenizer, data)  # TODO: Teacher tokenizer?
+            acc = do_arithmetic_eval(model, tokenizer, data)
             eval_dict[f"val/{operation}_acc"] = acc
-       
+
         eval_dict["val/arithmetic_eval_time"] = time.time() - start_time
         if print_results:
             print_acc(f"[validation_functions.py] Validation Results:", print_message)
@@ -218,7 +231,6 @@ def get_arithmetic_eval_fn(
         return eval_dict
 
     return partial(arithmetic_eval, eng_valid_loader=eng_valid_loader, tokenizer=tokenizer, accelerator=accelerator)
-
 def get_korean_and_english_evalaution_fn(
     model_name, 
     max_length, 
