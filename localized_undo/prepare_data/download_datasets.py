@@ -15,6 +15,15 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 def download_dataset(dataset_id, subset_name, output_filename, split="train", cache_dir=CACHE_DIR, batch_size=1_000_000,
                      max_rows=None):
+
+    output_path = os.path.join(OUTPUT_DIR, output_filename)
+    if os.path.exists(output_path):
+        print(f"[Skip] File already exists: {output_path}")
+        return
+
+    print(f"\n[download_datasets.py] Starting subset '{subset_name}' from '{dataset_id}'...")
+
+
     print(f"\n[download_datasets.py] Starting subset '{subset_name}' from '{dataset_id}'...")
 
     try:
