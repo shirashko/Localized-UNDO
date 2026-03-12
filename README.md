@@ -27,7 +27,7 @@ This will get you up and running with the core functionality on a single task ty
 ## 🚀 Initial Dataset + Model Processing
 ### ⚙️ Set up for all settings
 1. Add a huggingface token to `tokens/hf_token.txt` and a wandb token to `tokens/wandb_token.txt`
-2. `python src/prepare_models/reduce_gemma.py`
+2. `python src/prepare_models/prepare_reduced_gemma.py`
 3. `python src/prepare_data/download_datasets.py`
 4. `python src/prepare_data/download_arithmetic.py`
 5. Generate WMDP question-answer datasets via `wmdp_question_extraction.py`
