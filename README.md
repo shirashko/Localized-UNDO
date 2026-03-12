@@ -32,7 +32,7 @@ This will get you up and running with the core functionality on a single task ty
 
 ### ⚙️ Set up for all settings
 
-1. Add a huggingface token to `tokens/hf_token.txt` and a wandb token to `tokens/wandb_token.txt`
+1. Add a huggingface token to `tokens/hf_token.txt` and a wandb token to `tokens/wandb_token.txt. Additionally, since Gemma-2-2b is gated, you must manually request access by visiting the [Gemma-2-2b Model Page](https://huggingface.co/google/gemma-2-2b) and accept the license agreement.
 2. `python localized_undo/prepare_models/prepare_reduced_gemma.py`
 3. `python localized_undo/prepare_data/download_datasets.py --mode all`
 4. `python localized_undo/prepare_data/download_arithmetic.py`
