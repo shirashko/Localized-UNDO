@@ -36,30 +36,51 @@ def main():
         accelerator=accelerator
     )
 
-    # 4. Prepare training files (The flattening fix)
+    # 4. Prepare training files
     train_files = [config['eng_train_file']] + config['secondary_train_files']
 
-    # 5. Filter parameters to match the train() function signature
-    # We remove keys that are used for setup/loading but not by the train function itself
-    keys_to_exclude = [
-        'model_id',
-        'arithmetic_type',
-        'eng_train_file',
-        'secondary_train_files',
-        'eng_valid_file'
-    ]
-
-    train_params = {k: v for k, v in config.items() if k not in keys_to_exclude}
-
-    # 6. Run the training loop
+    # 5. Run the training loop
     train(
-        eval_fn=eval_fn,
-        accelerator=accelerator,
-        wandb_api_key=api_key,
+        # Model & Paths
+        model_name=config['model_name'],
         train_files=train_files,
-        **train_params
-    )
+        interleave_probs=config['interleave_probs'],
+        output_dir=config['output_dir'],
+        cache_dir=config['cache_dir'],
+        dataset_cache_dir=config['dataset_cache_dir'],
 
+        # Validation & Accelerator
+        eval_fn=eval_fn,
+        validation_steps=config['validation_steps'],
+        accelerator=accelerator,
+
+        # Training Hyperparameters
+        seed=config['seed'],
+        device=config['device'],
+        batch_size=config['batch_size'],
+        join_or_subsequence=config['join_or_subsequence'],
+        gradient_accumulation_steps=config['gradient_accumulation_steps'],
+        epochs=config['epochs'],
+        learning_rate=config['learning_rate'],
+        max_steps=config['max_steps'],
+        num_warmup_steps=config['num_warmup_steps'],
+        save_checkpoint_steps=config['save_checkpoint_steps'],
+        scheduler_type=config['scheduler_type'],
+        min_lr=config['min_lr'],
+        weight_decay=config['weight_decay'],
+        gradient_clipping_threshold=config['gradient_clipping_threshold'],
+        max_length=config['max_length'],
+
+        # WandB
+        use_wandb=config['use_wandb'],
+        wandb_project=config['wandb_project'],
+        wandb_run_name=config['wandb_run_name'],
+        wandb_api_key=api_key,
+
+        # Logging
+        use_local_record=config['use_local_record'],
+        path_local_record=config['path_local_record']
+    )
 
 if __name__ == "__main__":
     main()
