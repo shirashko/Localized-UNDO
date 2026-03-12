@@ -30,7 +30,7 @@ setups:
   gemma-2-0.1B_addition_subtraction+eng:
     model_id: "gemma-2-0.1B"
     arithmetic_type: "addition_subtraction"
-    batch_size: 5
-    gradient_accumulation_steps: 72
+    batch_size: 4
+    gradient_accumulation_steps: 90
     interleave_probs: [0.875, 0.125]
     wandb_run_name: "gemma-2-0.1B-arith-oracle"
