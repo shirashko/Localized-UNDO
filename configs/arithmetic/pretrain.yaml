@@ -15,6 +15,7 @@ default_config:
   join_or_subsequence: true
   use_wandb: true
   use_local_record: true
+  wandb_run_name: "gemma_pretrain_arithmetic"
 
 setups:
   # --- Models 0.1B ---
@@ -24,6 +25,7 @@ setups:
     batch_size: 4
     gradient_accumulation_steps: 90
     interleave_probs: [0.75, 0.25]
+    wandb_run_name: "gemma-2-0.1B-arith-reference"
 
   gemma-2-0.1B_addition_subtraction+eng:
     model_id: "gemma-2-0.1B"
@@ -31,3 +33,4 @@ setups:
     batch_size: 5
     gradient_accumulation_steps: 72
     interleave_probs: [0.875, 0.125]
+    wandb_run_name: "gemma-2-0.1B-arith-oracle"
