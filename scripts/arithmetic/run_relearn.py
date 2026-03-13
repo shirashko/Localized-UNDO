@@ -46,10 +46,12 @@ def launch_relearn_worker(exp_id, all_configs):
     # Initialize the evaluation function
     eval_fn = get_arithmetic_eval_fn(
         model_name=config['model_name'],
-        eng_valid_file=config['eng_valid_file'],
         batch_size=config['batch_size'],
         max_length=config['max_length'],
+        cache_dir=config['cache_dir'],
+        dataset_cache_dir=config['dataset_cache_dir'],
         num_wiki_batches=50,
+        eng_valid_file=config['eng_valid_file'],
         accelerator=accelerator
     )
 
