@@ -116,9 +116,8 @@ def load_distill_configs(yaml_path, setup_id):
 
                 mask_path = config.get('noise_mask_rel_path')
                 if mask_path:
-                    full_mask_path = MODEL_DIR / mask_path
                     # Loading the mask (expecting a Dict of Tensors)
-                    config['noise_mask'] = torch.load(full_mask_path, map_location='cpu')
+                    config['noise_mask'] = torch.load(mask_path, map_location='cpu')
                 else:
                     config['noise_mask'] = None
 
