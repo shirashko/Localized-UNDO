@@ -36,7 +36,7 @@ sweeps:
 setups:
   gemma-2-0.1B_MaxEnt:
     method: "MaxEnt"
-    # Pointing to the final_model from the Unlearning stage
-    teacher_rel_path: "unlearned_models/MaxEnt/gemma-2-0.1B_all_arithmetic+eng_lr_7.0e-05/final_model"
+    # Pointing to the final_model from the Unlearning stage - use the best model from the run_unlearn_model_selection.py script
+    teacher_rel_path: "unlearned_models/MaxEnt/gemma-2-0.1B_all_arithmetic+eng_lr_8.0e-05/final_model"
     wandb_project: "gemma-2-0.1B_all_arithmetic+eng_sp_distill"
 #    noise_mask_rel_path: "localization_masks/arithmetic_mask.pt"
