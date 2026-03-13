@@ -1,5 +1,5 @@
 import yaml
-from localized_undo.utils.paths import MODEL_DIR, DATASET_DIR, CACHE_DIR
+from localized_undo.utils.paths import MODEL_DIR, DATASET_DIR, CACHE_DIR, PROJECT_ROOT
 import torch
 
 
@@ -114,7 +114,7 @@ def load_distill_configs(yaml_path, setup_id):
                 config['cache_dir'] = str(CACHE_DIR)
                 config['dataset_cache_dir'] = str(CACHE_DIR)
 
-                mask_path = config.get('noise_mask_rel_path')
+                mask_path = PROJECT_ROOT / config.get('noise_mask_rel_path')
                 if mask_path:
                     # Loading the mask (expecting a Dict of Tensors)
                     config['noise_mask'] = torch.load(mask_path, map_location='cpu')
