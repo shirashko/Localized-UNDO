@@ -1,0 +1,9 @@
+{
+    "setup_id": "gemma-2-0.1B_MaxEnt_lr_8.0e-05",
+    "lr": 8e-05,
+    "lang_preserv_%": 95.98475630573328,
+    "forget_eff_%": 86.05341246290801,
+    "math_retent_%": 88.59649122807018,
+    "score": 2.706346599967115,
+    "output_dir": "/home/morg/students/rashkovits/Localized-UNDO/models/non-wmdp/unlearned_models/MaxEnt/pretrained_models_gemma-2-0.1B_all_arithmetic+eng_final_model_lr_8.0e-05"
+}
