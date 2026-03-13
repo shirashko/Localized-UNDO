@@ -1,19 +1,20 @@
 import argparse
 from accelerate import Accelerator
 from localized_undo.tools.relearn_langarith import relearn
-from localized_undo.utils.paths import CONFIG_DIR
+from localized_undo.utils.paths import CONFIG_DIR, MODEL_DIR
 from localized_undo.utils.config_handler import load_relearn_configs
 from localized_undo.utils.loss_functions import custom_login
 from localized_undo.utils.validation_functions import get_arithmetic_eval_fn
 from localized_undo.utils.parallel_launch import launch_in_parallel_one_per_gpu, get_parallel_launch_wrapper
 
+# Global login
 custom_login()
 
-# --- Config for dynamic paths ---
+# --- Configuration for dynamic paths (Undo Experiment Settings) ---
 seed = 111
 beta = 0.1
 alphas = [0.1, 0.3, 0.5, 0.7, 0.9]
-noise_mask = "global"  # or "delta-mask"
+noise_mask = "global"
 method = "MaxEnt"
 
 # Build paths for all distilled variants
@@ -22,18 +23,27 @@ distilled_paths = [
     for a in alphas
 ]
 
-MODELS_TO_RUN = [
-                    'pretrained_models/gemma-2-0.1B_addition_subtraction+eng', # Pretrain Pure
-                    'pretrained_models/gemma-2-0.1B_all_arithmetic+eng', # Pretrained Base
-                    'unlearned_models/MaxEnt/gemma-2-0.1B_all_arithmetic+eng_lr_8.0e-05', # Unlearned MaxEnt
-                ] + distilled_paths
+BASELINES_TO_RUN = [
+                    'pretrained_models/gemma-2-0.1B_addition_subtraction+eng',
+                    'pretrained_models/gemma-2-0.1B_all_arithmetic+eng',
+                    'unlearned_models/MaxEnt/gemma-2-0.1B_all_arithmetic+eng_lr_8.0e-05',
+                ]
+
+MODELS_TO_RUN = BASELINES_TO_RUN + distilled_paths
 
 
 def launch_relearn_worker(exp_id, all_configs):
+    """
+    Worker function to execute a single relearning experiment.
+    Maps configuration from YAML to the explicit arguments of the relearn function.
+    """
     config = all_configs[exp_id]
     accelerator = Accelerator()
+
+    # Authenticate with WandB and Hugging Face in child process
     custom_login()
 
+    # Initialize the evaluation function
     eval_fn = get_arithmetic_eval_fn(
         model_name=config['model_name'],
         eng_valid_file=config['eng_valid_file'],
@@ -87,10 +97,25 @@ if __name__ == "__main__":
     parser.add_argument("--setups", nargs='+', default=["gemma-2-0.1B_train_only_forget"], help="Setup IDs")
     args = parser.parse_args()
 
+    # --- Pre-run Safety Check ---
+    missing_models = []
+    for rel_path in MODELS_TO_RUN:
+        full_path = MODEL_DIR / rel_path
+        # Check for both directory and 'final_model' subfolder if applicable
+        if not full_path.exists() and not (full_path / "final_model").exists():
+            missing_models.append(rel_path)
+
+    if missing_models:
+        print(f"❌ Error: The following models are missing. Please check your unlearn/distill runs:")
+        for m in missing_models:
+            print(f"  - {m}")
+        raise Exception("wrong distilled model path")
+
     yaml_path = CONFIG_DIR / "arithmetic" / "relearn.yaml"
     all_experiments = load_relearn_configs(yaml_path, args.setups, MODELS_TO_RUN)
 
     print(f"🚀 Launching Relearning sweep for {len(all_experiments)} combinations...")
+    print(f"[*] Models involved: {len(MODELS_TO_RUN)}")
 
     task_list = [(eid, all_experiments) for eid in all_experiments.keys()]
     parallel_launcher = get_parallel_launch_wrapper(launch_relearn_worker)
