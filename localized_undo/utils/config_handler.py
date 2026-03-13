@@ -84,6 +84,10 @@ def load_distill_configs(yaml_path, setup_id):
                 config['noise_beta'] = float(beta)
                 config['seed'] = int(seed)
 
+                for key in ['learning_rate', 'min_lr', 'weight_decay']:
+                    if key in config:
+                        config[key] = float(config[key])
+
                 # Dynamic Paths
                 method = config['method']
                 config['teacher_model_name'] = str(MODEL_DIR / config['teacher_rel_path'])
