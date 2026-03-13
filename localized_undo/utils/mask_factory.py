@@ -86,12 +86,16 @@ class MaskFactory:
             exclude_components: Optional[List[str]],
             device: Optional[torch.device]
     ) -> Dict[str, torch.Tensor]:
-        """Generates delta mask with detailed skip/include logging."""
+        """Generates delta mask with comprehensive included/excluded logging."""
         masks = {}
         ref_params = {MaskFactory._get_clean_name(n): p for n, p in ref_model.named_parameters()}
 
         stats = {"included": 0, "excluded_rule": 0, "not_in_ref": 0, "not_2d": 0}
-        debug_excluded = []
+
+        # Lists to track names for the final debug report
+        included_names = []
+        excluded_names = []
+        skipped_not_2d = []
 
         for clean_name, param in MaskFactory._target_parameters(model):
             masks[clean_name] = torch.zeros_like(param.data)
@@ -101,18 +105,22 @@ class MaskFactory:
                 stats["not_in_ref"] += 1
                 continue
 
-            # 2. Check exclusion rules (e.g., embed_tokens, self_attn)
+            # 2. Check exclusion rules
             if MaskFactory._is_excluded(clean_name, exclude_components):
                 stats["excluded_rule"] += 1
-                debug_excluded.append(clean_name)
+                excluded_names.append(clean_name)
                 continue
 
             # 3. Check dimensionality (only weight matrices)
             if len(param.data.shape) < 2:
                 stats["not_2d"] += 1
+                skipped_not_2d.append(clean_name)
                 continue
 
+            # If we reached here, the parameter is INCLUDED
             stats["included"] += 1
+            included_names.append(clean_name)
+
             calc_device = device if device else param.device
             diff = torch.abs(param.data - ref_params[clean_name].data.to(calc_device))
 
@@ -125,11 +133,26 @@ class MaskFactory:
             else:
                 masks[clean_name] = torch.ones_like(diff)
 
-        print(f"\n[DEBUG MASK GENERATION] Params processed:")
-        print(f" -> Included: {stats['included']}")
-        print(f" -> Excluded by rule: {stats['excluded_rule']} (e.g., {debug_excluded[:3]})")
-        print(f" -> Skipped (Not in Reference): {stats['not_in_ref']}")
-        print(f" -> Skipped (Not 2D): {stats['not_2d']}")
+        # --- DETAILED DEBUG REPORT ---
+        print("\n" + "=" * 60)
+        print("DETAILED MASK AUDIT REPORT")
+        print("=" * 60)
+
+        print(f"\n[+] INCLUDED PARAMETERS ({len(included_names)} total):")
+        # Group by component type for readability (e.g., gate_proj, up_proj)
+        included_types = sorted(list(set([n.split('.')[-2] for n in included_names])))
+        print(f"    Component Types: {included_types}")
+        print(f"    Examples: {included_names[:5]}")
+
+        print(f"\n[-] EXCLUDED BY RULE ({len(excluded_names)} total):")
+        excluded_types = sorted(list(set([n.split('.')[-2] for n in excluded_names]))) if excluded_names else []
+        print(f"    Component Types: {excluded_types}")
+        print(f"    Examples: {excluded_names[:5]}")
+
+        print(f"\n[!] SKIPPED (NON-2D/BIAS) ({len(skipped_not_2d)} total):")
+        print(f"    Examples: {skipped_not_2d[:3]}")
+
+        print("=" * 60 + "\n")
 
         return masks
 
