@@ -25,6 +25,6 @@ setups:
     use_retain: true
     batch_size: 4
     gradient_accumulation_steps: 10
-    min_lr: 4e-5
+    min_lr: 0.00004
     wandb_project: "gemma-2-0.1B_all_arithmetic+eng_unlearn_MaxEnt"
     model_rel_path: "pretrained_models/gemma-2-0.1B_all_arithmetic+eng/final_model"

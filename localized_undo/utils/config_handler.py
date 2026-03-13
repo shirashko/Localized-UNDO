@@ -22,7 +22,10 @@ def load_relearn_configs(yaml_path, setup_ids, models_to_run):
                 config = base_cfg.copy()
                 lr_val = float(lr)
                 config['learning_rate'] = lr_val
-                config['min_lr'] = lr_val
+                if 'min_lr' in config:
+                    config['min_lr'] = float(config['min_lr'])
+                else:
+                    config['min_lr'] = lr_val
 
                 # Model Pathing
                 # If it's a distilled model, it might not have the 'final_model' subfolder
@@ -137,6 +140,9 @@ def load_unlearn_configs(yaml_path, base_setup_ids):
 
             config = config_template.copy()
             config['learning_rate'] = lr_val
+
+            if 'min_lr' in config:
+                config['min_lr'] = float(config['min_lr'])
 
             # Use paths from YAML/Paths.py instead of hard-coded strings
             # Note: We assume these keys exist in your YAML 'setups' or 'default_config'
