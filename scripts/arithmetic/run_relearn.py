@@ -14,19 +14,19 @@ custom_login()
 seed = 111
 beta = 0.1
 alphas = [0.1, 0.3, 0.5, 0.7, 0.9]
-noise_mask = "global"
+noise_type = "global"
 method = "MaxEnt"
 
 # Build paths for all distilled variants
 distilled_paths = [
-    f"partial_distill_models_arith/gemma-2-0.1B_{method}-arithmetic-partial_distill-{noise_mask}-alpha_{a}-beta_{beta}-seed_{seed}"
+    f"partial_distill_models_arith/gemma-2-0.1B_{method}-arithmetic-partial_distill-{noise_type}-alpha_{a}-beta_{beta}-seed_{seed}"
     for a in alphas
 ]
 
 BASELINES_TO_RUN = [
                     'pretrained_models/gemma-2-0.1B_addition_subtraction+eng',
                     'pretrained_models/gemma-2-0.1B_all_arithmetic+eng',
-                    'unlearned_models/MaxEnt/gemma-2-0.1B_all_arithmetic+eng_lr_8.0e-05',
+                    'unlearned_models/MaxEnt/pretrained_models_gemma-2-0.1B_all_arithmetic+eng_final_model_lr_8.0e-05',
                 ]
 
 MODELS_TO_RUN = BASELINES_TO_RUN + distilled_paths
