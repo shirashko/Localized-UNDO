@@ -97,14 +97,17 @@ def load_distill_configs(yaml_path, setup_id):
                 config['teacher_model_name'] = str(MODEL_DIR / config['teacher_rel_path'])
                 config['student_model_name'] = config['teacher_model_name']
 
+                exp_id = f"{setup_id}_{noise_type}_a{alpha}_b{beta}_s{seed}"
+                config['wandb_run_name'] = exp_id
+
                 # Path Naming: Added noise_type to differentiate localized methods
                 path_suffix = f"-{noise_type}-alpha_{alpha}-beta_{beta}-seed_{seed}"
                 base_name = f"gemma-2-0.1B_{method}-arithmetic-partial_distill"
 
-                config['output_dir'] = str(MODEL_DIR / "partial_distill_models_arith" / f"{base_name}{path_suffix}")
-                config['path_local_record'] = str(
-                    MODEL_DIR / "local_records/partial_distill_models_arith" / f"{base_name}{path_suffix}.txt")
-                config['wandb_run_name'] = f"{setup_id}_{noise_type}_a{alpha}_b{beta}_s{seed}"
+                partial_distill_models_dir = MODEL_DIR / "partial_distill_models_arith"
+                partial_distill_models_local_dir =  MODEL_DIR / "local_records" / "partial_distill_models_arith"
+                config['output_dir'] = str(partial_distill_models_dir / f"{base_name}{path_suffix}")
+                config['path_local_record'] = str(partial_distill_models_local_dir/ f"{base_name}{path_suffix}.txt")
 
                 # Global Data Paths
                 config['eng_train_file'] = str(DATASET_DIR / "pretrain/train_eng.jsonl")
@@ -114,14 +117,14 @@ def load_distill_configs(yaml_path, setup_id):
                 config['cache_dir'] = str(CACHE_DIR)
                 config['dataset_cache_dir'] = str(CACHE_DIR)
 
-                mask_path = PROJECT_ROOT / config.get('noise_mask_rel_path')
-                if mask_path:
-                    # Loading the mask (expecting a Dict of Tensors)
-                    config['noise_mask'] = torch.load(mask_path, map_location='cpu')
-                else:
-                    config['noise_mask'] = None
+                noise_mask_file_name = config.get('noise_mask_file_name')
+                if noise_mask_file_name is not None:
+                    mask_path = PROJECT_ROOT / "localization_masks" / noise_mask_file_name
+                    if mask_path.exists():
+                        config['noise_mask_path'] = str(mask_path)
+                    else:
+                        raise FileNotFoundError(f"Mask not found: {mask_path}")
 
-                exp_id = f"{setup_id}_{noise_type}_a{alpha}_b{beta}_s{seed}"
                 expanded_experiments[exp_id] = config
 
     return expanded_experiments

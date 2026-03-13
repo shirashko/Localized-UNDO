@@ -2,6 +2,7 @@ import argparse
 import sys
 from datetime import datetime
 from accelerate import Accelerator
+import torch
 
 # Tooling and Utils
 from localized_undo.tools.partial_distill_langarith import partial_distill
@@ -49,12 +50,14 @@ def arithmetic_stop_cond_fn(student_eval_dict, teacher_eval_dict, config):
     cond_forget = config['forget_arithmetic_threshold'] is None or avg_forget_diff < -config[
         'forget_arithmetic_threshold']
 
+
     # 4. Selection Logic based on the 'stop_condition' key
     mode = config['stop_condition']
     if mode == "english_only": return cond_eng
     if mode == "retain_arithmetic_only": return cond_retain
     if mode == "forget_arithmetic_only": return cond_forget
     return cond_eng and cond_retain and cond_forget
+
 
 
 def launch_worker(exp_id, all_configs):
@@ -83,6 +86,16 @@ def launch_worker(exp_id, all_configs):
     # Wrap the stop condition to inject the current experiment's config
     def stop_wrapper(student_eval_dict, teacher_eval_dict):
         return arithmetic_stop_cond_fn(student_eval_dict, teacher_eval_dict, config)
+
+
+    mask_path = config.get('noise_mask_path')
+    noise_mask_tensor = None
+    if mask_path:
+        try:
+            noise_mask_tensor = torch.load(mask_path, map_location='cpu', weights_only=True)
+        except Exception as e:
+            print(f"❌ Critical Error loading mask at {mask_path}: {e}")
+            return
 
     partial_distill(
         teacher_model_name=config['teacher_model_name'],
@@ -122,7 +135,7 @@ def launch_worker(exp_id, all_configs):
         noise_beta=config.get('noise_beta', 0.0),
         noise_type=config.get('noise_type', 'global'),
         shrink_perturb_repeat=config.get('shrink_perturb_repeat', False),
-        noise_mask=config.get('noise_mask')
+        noise_mask=noise_mask_tensor
     )
 
 
