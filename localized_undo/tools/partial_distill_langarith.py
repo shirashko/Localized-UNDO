@@ -59,6 +59,7 @@ def partial_distill(
     overwrite_ok,
     noise_alpha=0.0,
     noise_beta=0.0,
+    noise_type="global",
     shrink_perturb_repeat=False,
 
     noise_mask=None,

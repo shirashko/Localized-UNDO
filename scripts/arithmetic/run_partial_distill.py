@@ -81,27 +81,48 @@ def launch_worker(exp_id, all_configs):
     )
 
     # Wrap the stop condition to inject the current experiment's config
-    def stop_wrapper(s_dict, t_dict):
-        return arithmetic_stop_cond_fn(s_dict, t_dict, config)
+    def stop_wrapper(student_eval_dict, teacher_eval_dict):
+        return arithmetic_stop_cond_fn(student_eval_dict, teacher_eval_dict, config)
 
-    # Filter keys that are NOT defined in partial_distill's signature
-    exclude = {
-        'method', 'teacher_rel_path', 'stop_condition',
-        'english_threshold', 'retain_arithmetic_threshold',
-        'forget_arithmetic_threshold', 'arithmetic_train_file', 'eng_train_file', 'noise_mask_rel_path'
-    }
-    train_params = {k: v for k, v in config.items() if k not in exclude}
-
-    # Execute the core distillation tool
     partial_distill(
+        teacher_model_name=config['teacher_model_name'],
+        student_model_name=config['student_model_name'],
+        train_files=[config['eng_train_file'], config['arithmetic_train_file']],
+        interleave_probs=config['interleave_probs'],
+        stopping_strategy=config.get('stopping_strategy', 'first_exhausted'),
+        join_or_subsequence=config['join_or_subsequence'],
         eval_fn=eval_fn,
         stop_cond_fn=stop_wrapper,
         accelerator=accelerator,
-        train_files=[config['eng_train_file'], config['arithmetic_train_file']],
+        output_dir=config['output_dir'],
+        cache_dir=config['cache_dir'],
+        dataset_cache_dir=config['dataset_cache_dir'],
+        seed=config['seed'],
+        device=str(accelerator.device),
+        batch_size=config['batch_size'],
+        gradient_accumulation_steps=config['gradient_accumulation_steps'],
+        epochs=config['epochs'],
+        learning_rate=config['learning_rate'],
+        max_steps=config['max_steps'],
+        num_warmup_steps=config['num_warmup_steps'],
+        validation_steps=config['validation_steps'],
+        save_checkpoint_steps=config['save_checkpoint_steps'],
+        scheduler_type=config['scheduler_type'],
+        min_lr=config['min_lr'],
+        weight_decay=config['weight_decay'],
+        gradient_clipping_threshold=config['gradient_clipping_threshold'],
+        max_length=config['max_length'],
+        use_wandb=config['use_wandb'],
+        wandb_project=config['wandb_project'],
+        wandb_run_name=config['wandb_run_name'],
+        use_local_record=config['use_local_record'],
+        path_local_record=config['path_local_record'],
         overwrite_ok=True,
-        stopping_strategy='first_exhausted',
-        noise_mask=config.get('noise_mask'),
-        **train_params
+        noise_alpha=config.get('noise_alpha', 0.0),
+        noise_beta=config.get('noise_beta', 0.0),
+        noise_type=config.get('noise_type', 'global'),
+        shrink_perturb_repeat=config.get('shrink_perturb_repeat', False),
+        noise_mask=config.get('noise_mask')
     )
 
 

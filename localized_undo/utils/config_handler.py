@@ -62,7 +62,8 @@ def load_relearn_configs(yaml_path, setup_ids, models_to_run):
 
 def load_distill_configs(yaml_path, setup_id):
     """
-    Expands a base setup into a list of configurations for alpha/beta/seed sweep.
+    Expands a base setup into a list of configurations for alpha/beta/seed sweep,
+    incorporating dynamic noise types for localized localization analysis.
     """
     with open(yaml_path, 'r') as f:
         data = yaml.safe_load(f)
@@ -84,6 +85,9 @@ def load_distill_configs(yaml_path, setup_id):
                 config['noise_beta'] = float(beta)
                 config['seed'] = int(seed)
 
+                # Fetch noise_type (e.g., 'global', 'delta-mask', 'snmf')
+                noise_type = config.get('noise_type', 'global')
+
                 for key in ['learning_rate', 'min_lr', 'weight_decay']:
                     if key in config:
                         config[key] = float(config[key])
@@ -91,16 +95,16 @@ def load_distill_configs(yaml_path, setup_id):
                 # Dynamic Paths
                 method = config['method']
                 config['teacher_model_name'] = str(MODEL_DIR / config['teacher_rel_path'])
-                config['student_model_name'] = config['teacher_model_name']  # Usually initialized from teacher
+                config['student_model_name'] = config['teacher_model_name']
 
-                # Path Naming
-                path_suffix = f"-alpha_{alpha}-beta_{beta}-seed_{seed}"
+                # Path Naming: Added noise_type to differentiate localized methods
+                path_suffix = f"-{noise_type}-alpha_{alpha}-beta_{beta}-seed_{seed}"
                 base_name = f"gemma-2-0.1B_{method}-arithmetic-partial_distill"
 
                 config['output_dir'] = str(MODEL_DIR / "partial_distill_models_arith" / f"{base_name}{path_suffix}")
                 config['path_local_record'] = str(
                     MODEL_DIR / "local_records/partial_distill_models_arith" / f"{base_name}{path_suffix}.txt")
-                config['wandb_run_name'] = f"{setup_id}_alpha{alpha}_beta{beta}_seed{seed}"
+                config['wandb_run_name'] = f"{setup_id}_{noise_type}_a{alpha}_b{beta}_s{seed}"
 
                 # Global Data Paths
                 config['eng_train_file'] = str(DATASET_DIR / "pretrain/train_eng.jsonl")
@@ -118,11 +122,10 @@ def load_distill_configs(yaml_path, setup_id):
                 else:
                     config['noise_mask'] = None
 
-                exp_id = f"{setup_id}_a{alpha}_b{beta}_s{seed}"
+                exp_id = f"{setup_id}_{noise_type}_a{alpha}_b{beta}_s{seed}"
                 expanded_experiments[exp_id] = config
 
     return expanded_experiments
-
 
 def load_unlearn_configs(yaml_path, base_setup_ids):
     with open(yaml_path, 'r') as f:
