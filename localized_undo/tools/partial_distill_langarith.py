@@ -419,46 +419,52 @@ def do_corruption(model, noise_alpha, noise_beta=0.1, seed=42, noise_mask=None):
     count_corrupted = 0
     total_trainable = 0
 
-    # Pre-normalize mask keys to ensure alignment if a mask is provided
+    # 1. Pre-normalize and Calculate Global Sparsity
+    normalized_mask = None
     if isinstance(noise_mask, dict):
-        noise_mask = {k.replace("model.", ""): v for k, v in noise_mask.items()}
+        # Normalize keys (remove 'model.' prefix)
+        normalized_mask = {k.replace("model.", ""): v for k, v in noise_mask.items()}
 
+        # Calculate global weight-level sparsity across all masked layers
+        total_elements = 0
+        non_zero_elements = 0
+        for m_tensor in normalized_mask.values():
+            total_elements += m_tensor.numel()
+            non_zero_elements += (m_tensor > 0).sum().item()
+
+        global_sparsity = 1 - (non_zero_elements / total_elements)
+        print(f"[DEBUG] Mask Global Sparsity: {global_sparsity:.4%}")
+        print(f"[DEBUG] Total weights affected by mask: {non_zero_elements} out of {total_elements}")
+
+    # 2. Apply Corruption Loop
     for name, param in model.named_parameters():
         if not param.requires_grad:
             continue
 
         total_trainable += 1
 
-        # Clean the name to handle DistributedDataParallel (module.) or student wrappers
+        # Clean the name to handle DistributedDataParallel or student wrappers
         clean_name = name.replace("module.", "").replace("student_model.", "")
         if clean_name.startswith("model."):
             clean_name = clean_name[6:]
 
         # Determine if we should apply noise:
-        # 1. Global case (noise_mask is None)
-        # 2. Localized case (noise_mask is a dict and name is present)
-        is_in_mask = (noise_mask is None) or (isinstance(noise_mask, dict) and clean_name in noise_mask)
-
-        if isinstance(noise_mask, dict) and clean_name not in noise_mask:
-            if count_corrupted == 0:
-                print(f"[DEBUG] Mismatch: Model has '{clean_name}', Mask has keys like '{list(noise_mask.keys())[0]}'")
+        is_in_mask = (normalized_mask is None) or (clean_name in normalized_mask)
 
         if is_in_mask:
             count_corrupted += 1
 
-            # Generate corruption noise based on parameter dimensionality
+            # Generate corruption noise
             if len(param.data.shape) >= 2:
-                # Use Xavier Uniform for weight matrices
                 noise = torch.nn.init.xavier_uniform_(torch.empty_like(param.data))
             else:
-                # For 1D parameters (biases, norms), we typically use zeros (no noise)
                 noise = torch.zeros_like(param.data)
 
             corruption = noise_beta * noise
 
-            # Calculate effective alpha:
-            if isinstance(noise_mask, dict) and clean_name in noise_mask:
-                mask_val = noise_mask.get(clean_name)
+            # Calculate effective alpha
+            if normalized_mask is not None and clean_name in normalized_mask:
+                mask_val = normalized_mask.get(clean_name)
                 m = mask_val.to(device=param.device, dtype=param.dtype)
                 effective_alpha = noise_alpha * m
             else:
@@ -471,4 +477,4 @@ def do_corruption(model, noise_alpha, noise_beta=0.1, seed=42, noise_mask=None):
     device = next(model.parameters()).device
     model.to(device)
 
-    print(f"[DEBUG] Applied corruption to {count_corrupted} parameters (Total trainable: {total_trainable}).")
+    print(f"[DEBUG] Applied corruption to {count_corrupted} parameter blocks (Total trainable: {total_trainable}).")
