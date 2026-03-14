@@ -15,8 +15,11 @@ def create_mask_sweep(
         exclude_components: list = ["self_attn", "layernorm", "embed_tokens"],
         base_folder_name: str = "arithmetic"
 ):
-    """Generates paired Delta and Random masks for a sweep of percentiles."""
-    print(f"[*] Starting Mask Sweep for percentiles: {percentiles}")
+    """
+    Generates a full cross-product of masks:
+    (Delta vs Random) x (Global vs Layer-wise) for each percentile.
+    """
+    print(f"[*] Starting Comprehensive Mask Sweep for percentiles: {percentiles}")
     device = torch.device("cpu")
 
     # Load Models Once for generation
@@ -30,45 +33,58 @@ def create_mask_sweep(
     for p in percentiles:
         print(f"\n--- Generating Masks for Percentile: {p} ---")
 
-        mask_results = {}
-        for mask_type in ["delta_mask", "random"]:
-            mask = MaskFactory.get_mask(
-                mask_type=mask_type,
-                model=unlearned_model,
-                ref_model=ref_model if mask_type == "delta_mask" else None,
-                percentile=p,
-                exclude_components=exclude_components,
-                device=device
-            )
-            mask_results[mask_type] = mask
+        # Define the modes we want to compare
+        mask_types = ["delta_mask", "random"]
+        distribution_modes = ["global", "layer-wise"]
 
-        delta_stats = MaskFactory.analyze_mask(mask_results["delta_mask"], unlearned_model)
+        for dist_mode in distribution_modes:
+            for m_type in mask_types:
+                # Generate the specific mask configuration
+                mask = MaskFactory.get_mask(
+                    mask_type=m_type,
+                    model=unlearned_model,
+                    ref_model=ref_model if m_type == "delta_mask" else None,
+                    percentile=p,
+                    exclude_components=exclude_components,
+                    device=device,
+                    distribution_mode=dist_mode
+                )
 
-        # Metadata logic
-        metadata = {
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "config": {"percentile": p, "exclusions": exclude_components},
-            "sparsity": f"{delta_stats['mask/total_sparsity']:.4%}"
-        }
+                # Run diagnostic analysis on the generated mask
+                stats = MaskFactory.analyze_mask(mask)
 
-        p_int = int(p * 100) if p < 1.0 else int(p)
-        folder_name = f"{base_folder_name}_p{p_int}_excl_{'_'.join(exclude_components)}"
-        output_dir = LOCALIZATION_MASKS_DIR / folder_name
-        os.makedirs(output_dir, exist_ok=True)
+                # Metadata for tracking
+                metadata = {
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "config": {
+                        "percentile": p,
+                        "mask_type": m_type,
+                        "distribution_mode": dist_mode,
+                        "exclusions": exclude_components
+                    },
+                    "analysis": stats
+                }
 
-        torch.save(mask_results["delta_mask"], output_dir / "delta_mask.pt")
-        torch.save(mask_results["random"], output_dir / "random_baseline.pt")
-        with open(output_dir / "mask_config.json", "w") as f:
-            json.dump(metadata, f, indent=4)
+                p_int = int(p * 100) if p < 1.0 else int(p)
+                folder_name = f"{base_folder_name}_p{p_int}_{m_type}_{dist_mode}"
+                output_dir = LOCALIZATION_MASKS_DIR / folder_name
+                os.makedirs(output_dir, exist_ok=True)
 
-        print(f"[+] Saved percentile {p} to: {output_dir}")
-        created_folders.append(str(output_dir))
+                # Save the individual mask and its metadata
+                mask_filename = "mask.pt"  # Keep standard name for the diagnostic tool to find
+                torch.save(mask, output_dir / mask_filename)
+
+                with open(output_dir / "mask_config.json", "w") as f:
+                    json.dump(metadata, f, indent=4)
+
+                print(f"[+] Saved {m_type} ({dist_mode}) to: {output_dir}")
+                created_folders.append(str(output_dir))
 
     return created_folders
 
 
 def run_diagnostic_sweep(folders: list, model_to_test: str, eng_valid: str):
-    """Applies the diagnostic suite to a list of folders using the Unlearned model."""
+    """Applies the diagnostic suite to verify unlearning robustness for each mask mode."""
     print("\n" + "=" * 50)
     print("STARTING MECHANISTIC DIAGNOSTIC SWEEP")
     print("=" * 50)
@@ -77,6 +93,7 @@ def run_diagnostic_sweep(folders: list, model_to_test: str, eng_valid: str):
 
     for folder in sorted(folders):
         try:
+            print(f"[*] Analyzing folder: {os.path.basename(folder)}")
             analyzer.run_on_folder(folder)
         except Exception as e:
             print(f"[!] Error analyzing {folder}: {e}")
@@ -94,7 +111,7 @@ if __name__ == "__main__":
     EXCLUSIONS = ["self_attn", "layernorm", "embed_tokens"]
 
     # 3. Execute
-    # Step A: Create the masks
+    # Step A: Create all mask variations
     sweep_folders = create_mask_sweep(
         reference_model_path=PRETRAINED_PATH,
         unlearned_model_path=UNLEARNED_PATH,
@@ -102,10 +119,10 @@ if __name__ == "__main__":
         exclude_components=EXCLUSIONS
     )
 
-    # Step B: Run diagnostics on the Unlearned model
+    # Step B: Run diagnostics on the Unlearned model to test corruption effectiveness
     run_diagnostic_sweep(
         folders=sweep_folders,
-        model_to_test=UNLEARNED_PATH,  # Testing on the model we want to "fix"
+        model_to_test=UNLEARNED_PATH,
         eng_valid=ENG_VALID
     )
 
