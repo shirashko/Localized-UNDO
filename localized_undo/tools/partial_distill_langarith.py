@@ -75,7 +75,11 @@ def partial_distill(
     # ------------------------------------------------------------
     print_message = accelerator.is_main_process
 
-    distill_args = {**locals()}
+    distill_args = {k: v for k, v in locals().items() if
+                    k not in ['noise_mask', 'accelerator', 'eval_fn', 'stop_cond_fn']}
+    distill_args['has_noise_mask'] = noise_mask is not None
+    print(f"has noise mask: {distill_args['has_noise_mask']}")
+
     print_acc(f"[serum_original.py] Initiated distillation with:\n{distill_args}", print_message)
     
     custom_makedirs(output_dir, exist_ok=overwrite_ok)
