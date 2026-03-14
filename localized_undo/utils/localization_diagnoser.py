@@ -7,6 +7,7 @@ from typing import Dict
 from transformers import AutoModelForCausalLM
 from accelerate import Accelerator
 from localized_undo.utils.validation_functions import get_arithmetic_eval_fn
+from localized_undo.utils.paths import CACHE_DIR
 
 
 class MaskMechanisticDiagnostic:
@@ -31,9 +32,13 @@ class MaskMechanisticDiagnostic:
 
         # Initialize arithmetic evaluation suite
         self.eval_fn = get_arithmetic_eval_fn(
-            model_name=model_path, batch_size=8, max_length=256,
+            model_name=model_path,
+            batch_size=8,
+            max_length=256,
             num_wiki_batches=50, eng_valid_file=eng_valid_path,
-            accelerator=self.accelerator
+            accelerator=self.accelerator,
+            dataset_cache_dir=str(CACHE_DIR),
+            cache_dir=str(CACHE_DIR),
         )
 
     def restore(self):
