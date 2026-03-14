@@ -1,0 +1,68 @@
+default_config:
+  cache_dir: "CACHE_DIR"
+  dataset_cache_dir: "CACHE_DIR"
+  join_or_subsequence: true
+  stopping_strategy: "all_exhausted"
+  device: "cuda"
+  batch_size: 10
+  gradient_accumulation_steps: 11
+  epochs: 2
+  learning_rate: 2.0e-5
+  max_steps: 3000
+  num_warmup_steps: 50
+  validation_steps: 500
+  save_checkpoint_steps: 1000
+  scheduler_type: "cosine"
+  weight_decay: 0
+  gradient_clipping_threshold: 1.0
+  max_length: 1024
+  noise_alpha: 0.25
+  noise_beta: 0
+  use_wandb: true
+  use_local_record: true
+  shrink_perturb_repeat: false
+  compile_mode: "default"
+  layers_to_train: "all"
+  layer_types_to_train: "all"
+  base_teacher_name: null
+  switch_teachers: false
+  use_base_teacher_percent: 0
+  use_activation_loss: false
+  both_losses_act_loss_multiplier: null
+
+# Experiment Sweeps
+sweeps:
+  seeds: [60]
+  lrs: [2.0e-5]
+  base_teacher_percents: [0]
+  alphas: [0.25]
+
+# Dataset mappings with their respective interleave probabilities
+datasets:
+  all_data:
+    files:
+      - "pretrain/train_eng.jsonl"
+      - "pretrain/train_wikipedia.jsonl"
+      - "pretrain/train_magpie.jsonl"
+      # ... add other magpie files here ...
+      - "pretrain/train_wmdp-wikipedia_qa.jsonl"
+    probs: [0.35, 0.35, 0.05, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.01]
+
+# Specific architecture variants
+setups:
+  basic:
+
+  activations-and-logits:
+    batch_size: 5
+    gradient_accumulation_steps: 22
+    validation_steps: 200
+    use_activation_loss: true
+    both_losses_act_loss_multiplier: 10
+
+  beta5:
+    noise_beta: 0.5
+
+  seq-1536:
+    max_length: 1536
+    batch_size: 7
+    gradient_accumulation_steps: 10

@@ -4,23 +4,37 @@ from localized_undo.utils.paths import MODEL_DIR, DATASET_DIR, CACHE_DIR, PROJEC
 
 def _initialize_base_config(data, setup_id):
     """
-    Internal helper to merge defaults with setup-specific configs and
-    standardize common paths and types.
+    Unified inheritance logic: Starts with default_config and
+    overwrites with setup-specific values if they exist.
     """
-    if setup_id not in data['setups']:
+    if 'setups' not in data or setup_id not in data['setups']:
         raise KeyError(f"Setup ID '{setup_id}' not found in the YAML configuration.")
 
+    # Start with a deep copy of the defaults
     config = data['default_config'].copy()
-    config.update(data['setups'][setup_id])
 
-    # Standardize cache directories
+    # Retrieve overrides. Handle the case where the setup is empty/None in YAML
+    setup_overrides = data['setups'].get(setup_id)
+    if setup_overrides:
+        config.update(setup_overrides)
+
+    # Standardize cache directories to the system paths
     config['cache_dir'] = str(CACHE_DIR)
     config['dataset_cache_dir'] = str(CACHE_DIR)
 
-    # Explicit casting for numerical hyperparameters
-    for key in ['learning_rate', 'min_lr', 'weight_decay', 'noise_alpha', 'noise_beta']:
+    float_keys = [
+        'learning_rate', 'min_lr', 'noise_alpha', 'noise_beta',
+        'weight_decay', 'gradient_clipping_threshold',
+        'both_losses_act_loss_multiplier', 'use_base_teacher_percent'
+    ]
+    for key in float_keys:
         if key in config and config[key] is not None:
             config[key] = float(config[key])
+
+    int_keys = ['batch_size', 'gradient_accumulation_steps', 'max_steps', 'seed', 'max_length', 'epochs']
+    for key in int_keys:
+        if key in config and config[key] is not None:
+            config[key] = int(config[key])
 
     return config
 
@@ -249,5 +263,59 @@ def load_wmdp_unlearn_configs(yaml_path, setup_ids):
 
                     unique_id = f"{base_id}_{params_str}"
                     expanded_experiments[unique_id] = config
+
+    return expanded_experiments
+
+
+def load_wmdp_distill_configs(yaml_path, setup_ids, model_map):
+    with open(yaml_path, 'r') as f:
+        data = yaml.safe_load(f)
+
+    sweep = data.get('sweeps', {})
+    dataset_info = data.get('datasets', {})
+    expanded_experiments = {}
+
+    for setup_id in setup_ids:
+        config_template = _initialize_base_config(data, setup_id)
+
+        for model_name, model_path_template in model_map.items():
+            for dataset_name, d_val in dataset_info.items():
+                for seed in sweep.get('seeds', [42]):
+                    for lr in sweep.get('lrs', [2e-5]):
+                        for alpha in sweep.get('alphas', [0.25]):
+                            for teacher_pct in sweep.get('base_teacher_percents', [0]):
+
+                                config = config_template.copy()
+
+                                if isinstance(model_path_template, tuple):
+                                    config['teacher_model_name'] = model_path_template[0].replace("SEED", str(seed))
+                                    config['student_model_name'] = model_path_template[1].replace("SEED", str(seed))
+                                else:
+                                    path = model_path_template.replace("SEED", str(seed))
+                                    config['teacher_model_name'] = path
+                                    config['student_model_name'] = path
+
+                                config.update({
+                                    'learning_rate': float(lr),
+                                    'min_lr': float(lr / 10.0),
+                                    'seed': int(seed),
+                                    'noise_alpha': float(alpha),
+                                    'use_base_teacher_percent': float(teacher_pct)
+                                })
+
+                                # Dataset logic
+                                config['train_files'] = [str(DATASET_DIR / f) for f in d_val['files']]
+                                config['interleave_probs'] = d_val['probs']
+                                config['domain'] = 'cyber' if 'cyber' in model_name else (
+                                    'bio' if 'bio' in model_name else 'both')
+
+                                # Path Naming
+                                exp_slug = f"{config['domain']}/{model_name}/{setup_id}-{dataset_name}-lr_{lr:2e}-seed_{seed}-tp_{teacher_pct}"
+                                config['output_dir'] = str(WMDP_MODEL_DIR / "distilled_models" / exp_slug)
+                                config['path_local_record'] = str(WMDP_MODEL_DIR / "local_records" / f"{exp_slug}.txt")
+                                config['wandb_run_name'] = exp_slug.replace('/', '_')
+
+                                unique_id = f"{setup_id}_{model_name}_{dataset_name}_{seed}_{teacher_pct}"
+                                expanded_experiments[unique_id] = config
 
     return expanded_experiments
