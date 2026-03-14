@@ -1,0 +1,50 @@
+default_config:
+  model_name: "WMDP_MODEL_DIR/gemma-2-2b"
+  device: "cuda"
+  batch_size: 4
+  gradient_accumulation_steps: 10
+  epochs: 5
+  max_steps: 90
+  validation_steps: 100
+  scheduler_type: "cosine"
+  gradient_clipping_threshold: 1.0
+  max_length: 256
+  use_wandb: true
+  use_local_record: true
+
+# ranges per method
+
+lr_ranges:
+  MaxEnt: [2e-5]
+  RMU: [5e-5]
+  repnoise: [2e-5]
+  SAM: [2e-5]
+
+alpha_ranges:
+  MaxEnt_bio: [0.3, 0.1]
+  MaxEnt_cyber: [0.2]
+  RMU_bio: [0.5]
+  RMU_cyber: [0.5, 0.2, 0.1]
+
+setups:
+  cyber_MaxEnt:
+    method: "MaxEnt"
+    forget_rel_path: "pretrain/train_wmdp-cyber-forget-corpus_qa.jsonl"
+    retain_files:
+      - "pretrain/train_wmdp-cyber-retain-corpus_qa.jsonl"
+      - "pretrain/train_wikitext.jsonl"
+    interleave_probs: [0.5, 0.5]
+    wandb_project: "cyber_unlearn_MaxEnt"
+    use_retain_kl: true
+    use_sam: false
+    use_repnoise: false
+
+  bio_RMU:
+    method: "RMU"
+    forget_rel_path: "pretrain/train_wmdp-bio_remove_dataset_qa.jsonl"
+    retain_files:
+      - "pretrain/train_wikitext.jsonl"
+      - "pretrain/train_wmdp-bio_retain_dataset_qa.jsonl"
+    rmu_layers: [10, 11, 12, 13, 14, 15]
+    c: 80
+    wandb_project: "bio_unlearn_RMU"
