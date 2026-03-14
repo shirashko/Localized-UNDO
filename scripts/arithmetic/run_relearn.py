@@ -14,7 +14,7 @@ custom_login()
 seed = 111
 beta = 0.1
 alphas = [0.1, 0.3, 0.5, 0.7, 0.9]
-noise_type = "global"
+noise_type = "delta-mask" # "global"
 method = "MaxEnt"
 
 # Build paths for all distilled variants
@@ -29,7 +29,8 @@ BASELINES_TO_RUN = [
                     'unlearned_models/MaxEnt/pretrained_models_gemma-2-0.1B_all_arithmetic+eng_final_model_lr_8.0e-05',
                 ]
 
-MODELS_TO_RUN = BASELINES_TO_RUN + distilled_paths
+# MODELS_TO_RUN = BASELINES_TO_RUN + distilled_paths
+MODELS_TO_RUN = distilled_paths
 
 
 def launch_relearn_worker(exp_id, all_configs):
