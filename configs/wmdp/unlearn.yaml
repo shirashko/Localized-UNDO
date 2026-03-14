@@ -1,5 +1,5 @@
 default_config:
-  model_name: "WMDP_MODEL_DIR/gemma-2-2b"
+  model_rel_path: "gemma-2-2b"
   device: "cuda"
   batch_size: 4
   gradient_accumulation_steps: 10
@@ -11,40 +11,130 @@ default_config:
   max_length: 256
   use_wandb: true
   use_local_record: true
+  seed: 42
 
-# ranges per method
+sweeps:
+  seeds: [42, 43, 44, 45]
 
 lr_ranges:
-  MaxEnt: [2e-5]
-  RMU: [5e-5]
-  repnoise: [2e-5]
-  SAM: [2e-5]
+  MaxEnt: [2e-05]
+  RMU: [5e-05]
+  repnoise: [2e-05]
+  SAM: [2e-05]
+  GradDiff: [2e-05]
 
 alpha_ranges:
   MaxEnt_bio: [0.3, 0.1]
   MaxEnt_cyber: [0.2]
   RMU_bio: [0.5]
   RMU_cyber: [0.5, 0.2, 0.1]
+  repnoise_bio: [0.3, 0.1]
+  repnoise_cyber: [0.5]
+  SAM_bio: [0.3, 0.1]
+  SAM_cyber: [0.5]
+  GradDiff_bio: [0.3] # Placeholder for GradDiff
+  GradDiff_cyber: [0.5]
 
 setups:
+  # --- CYBER SETUPS ---
   cyber_MaxEnt:
     method: "MaxEnt"
     forget_rel_path: "pretrain/train_wmdp-cyber-forget-corpus_qa.jsonl"
-    retain_files:
-      - "pretrain/train_wmdp-cyber-retain-corpus_qa.jsonl"
-      - "pretrain/train_wikitext.jsonl"
+    retain_files: ["pretrain/train_wmdp-cyber-retain-corpus_qa.jsonl", "pretrain/train_wikitext.jsonl"]
     interleave_probs: [0.5, 0.5]
     wandb_project: "cyber_unlearn_MaxEnt"
+    use_retain: true
     use_retain_kl: true
     use_sam: false
     use_repnoise: false
 
+  cyber_SAM:
+    method: "SAM"
+    forget_rel_path: "pretrain/train_wmdp-cyber-forget-corpus_qa.jsonl"
+    retain_files: ["pretrain/train_wmdp-cyber-retain-corpus_qa.jsonl", "pretrain/train_wikitext.jsonl"]
+    interleave_probs: [0.5, 0.5]
+    wandb_project: "cyber_unlearn_MaxEnt-SAM"
+    use_retain: true
+    use_retain_kl: true
+    use_sam: true
+    use_repnoise: false
+
+  cyber_repnoise:
+    method: "repnoise"
+    forget_rel_path: "pretrain/train_wmdp-cyber-forget-corpus_qa.jsonl"
+    retain_files: ["pretrain/train_wmdp-cyber-retain-corpus_qa.jsonl", "pretrain/train_wikitext.jsonl"]
+    interleave_probs: [0.5, 0.5]
+    batch_size: 1
+    gradient_accumulation_steps: 40
+    wandb_project: "cyber_unlearn_MaxEnt-repnoise"
+    use_retain: true
+    use_retain_kl: true
+    use_sam: false
+    use_repnoise: true
+
+  cyber_RMU:
+    method: "RMU"
+    forget_rel_path: "pretrain/train_wmdp-cyber-forget-corpus_qa.jsonl"
+    retain_files: ["pretrain/train_wmdp-cyber-retain-corpus_qa.jsonl", "pretrain/train_wikitext.jsonl"]
+    interleave_probs: [0.5, 0.5]
+    wandb_project: "cyber_unlearn_RMU"
+    rmu_layers: [10, 11, 12, 13, 14, 15]
+    end_layer: 15
+    c: 80
+    ga_gd: true
+
+  cyber_GradDiff:
+    method: "GradDiff"
+    forget_rel_path: "pretrain/train_wmdp-cyber-forget-corpus_qa.jsonl"
+    retain_files: ["pretrain/train_wmdp-cyber-retain-corpus_qa.jsonl"]
+    wandb_project: "cyber_unlearn_GradDiff"
+    ga_gd: true
+
+  # --- BIO SETUPS ---
+  bio_MaxEnt:
+    method: "MaxEnt"
+    forget_rel_path: "pretrain/train_wmdp-bio_remove_dataset_qa.jsonl"
+    retain_files: ["pretrain/train_wmdp-bio_retain_dataset_qa.jsonl", "pretrain/train_wikitext.jsonl"]
+    interleave_probs: [0.5, 0.5]
+    wandb_project: "bio_unlearn_MaxEnt"
+    use_retain: true
+    use_retain_kl: true
+    use_sam: false
+    use_repnoise: false
+
+  bio_SAM:
+    method: "SAM"
+    forget_rel_path: "pretrain/train_wmdp-bio_remove_dataset_qa.jsonl"
+    retain_files: ["pretrain/train_wmdp-bio_retain_dataset_qa.jsonl", "pretrain/train_wikitext.jsonl"]
+    interleave_probs: [0.5, 0.5]
+    wandb_project: "bio_unlearn_MaxEnt-SAM"
+    use_retain: true
+    use_retain_kl: true
+    use_sam: true
+    use_repnoise: false
+
+  bio_repnoise:
+    method: "repnoise"
+    forget_rel_path: "pretrain/train_wmdp-bio_remove_dataset_qa.jsonl"
+    retain_files: ["pretrain/train_wmdp-bio_retain_dataset_qa.jsonl", "pretrain/train_wikitext.jsonl"]
+    interleave_probs: [0.5, 0.5]
+    batch_size: 1
+    gradient_accumulation_steps: 40
+    wandb_project: "bio_unlearn_MaxEnt-repnoise"
+    use_retain: true
+    use_retain_kl: true
+    use_sam: false
+    use_repnoise: true
+
   bio_RMU:
     method: "RMU"
     forget_rel_path: "pretrain/train_wmdp-bio_remove_dataset_qa.jsonl"
-    retain_files:
-      - "pretrain/train_wikitext.jsonl"
-      - "pretrain/train_wmdp-bio_retain_dataset_qa.jsonl"
-    rmu_layers: [10, 11, 12, 13, 14, 15]
-    c: 80
+    retain_files: ["pretrain/train_wikitext.jsonl", "pretrain/train_wmdp-bio_retain_dataset_qa.jsonl"]
+    interleave_probs: [0.5, 0.5]
+    batch_size: 8
+    gradient_accumulation_steps: 5
     wandb_project: "bio_unlearn_RMU"
+    rmu_layers: [10, 11, 12, 13, 14, 15]
+    end_layer: 15
+    c: 80
+    ga_gd: true

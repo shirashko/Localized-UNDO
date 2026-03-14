@@ -1,5 +1,5 @@
 import yaml
-from localized_undo.utils.paths import MODEL_DIR, DATASET_DIR, CACHE_DIR, PROJECT_ROOT
+from localized_undo.utils.paths import MODEL_DIR, DATASET_DIR, CACHE_DIR, PROJECT_ROOT, WMDP_MODEL_DIR
 
 
 def _initialize_base_config(data, setup_id):
@@ -185,3 +185,69 @@ def load_pretrain_config(yaml_path, setup_id):
     config['path_local_record'] = str(MODEL_DIR / "local_records" / "pretrained_models" / f"{setup_id}.txt")
 
     return config
+
+
+def load_wmdp_unlearn_configs(yaml_path, setup_ids):
+    """
+    Expands WMDP unlearning setups into multiple experiments based on
+    learning rate ranges, alpha ranges, and seeds defined in YAML.
+    """
+    with open(yaml_path, 'r') as f:
+        data = yaml.safe_load(f)
+
+    # Retrieve seeds from sweep section or default config
+    seeds = data.get('sweeps', {}).get('seeds', [data.get('default_config', {}).get('seed', 42)])
+    expanded_experiments = {}
+
+    for base_id in setup_ids:
+        # Merges default_config with specific setup config
+        config_template = _initialize_base_config(data, base_id)
+
+        method = config_template['method']
+        # Detect domain (cyber/bio) from the setup ID string
+        domain = 'cyber' if 'cyber' in base_id.lower() else 'bio'
+
+        # Fetch LR and Alpha ranges based on method and domain
+        lrs = data.get('lr_ranges', {}).get(method, [2e-05])
+        alpha_key = f"{method}_{domain}"
+        alphas = data.get('alpha_ranges', {}).get(alpha_key, [0.5])
+
+        for lr in lrs:
+            for alpha in alphas:
+                for seed in seeds:
+                    config = config_template.copy()
+                    lr_val = float(lr)
+                    alpha_val = float(alpha)
+
+                    # Update core hyperparameters for this iteration
+                    config.update({
+                        'learning_rate': lr_val,
+                        'min_lr': lr_val,
+                        'alpha': alpha_val,
+                        'seed': int(seed)
+                    })
+
+                    # Unique identifier for directory naming and tracking
+                    params_str = f'lr_{lr_val:.2e}_alpha_{alpha_val:.2f}_seed_{seed}'
+
+                    # Construct full model path from relative path in YAML
+                    if 'model_rel_path' in config:
+                        config['model_name'] = str(WMDP_MODEL_DIR / config['model_rel_path'])
+
+                    # Set dynamic output directories and record paths
+                    config['output_dir'] = str(MODEL_DIR / f"unlearned_models/{method}/{domain}_{params_str}")
+                    config['path_local_record'] = str(
+                        MODEL_DIR / f"local_records/unlearned_models/{method}/{domain}_{params_str}.txt")
+
+                    # Set informative WandB run name
+                    config['wandb_run_name'] = f"{method}_{domain}_{params_str}"
+
+                    # Construct full data paths
+                    config['forget_train_file'] = str(DATASET_DIR / config['forget_rel_path'])
+                    if 'retain_files' in config:
+                        config['retain_files'] = [str(DATASET_DIR / p) for p in config['retain_files']]
+
+                    unique_id = f"{base_id}_{params_str}"
+                    expanded_experiments[unique_id] = config
+
+    return expanded_experiments
