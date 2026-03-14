@@ -3,8 +3,9 @@ import torch
 import json
 from datetime import datetime
 from transformers import AutoModelForCausalLM
-from localized_undo.utils.paths import MODEL_DIR, LOCALIZATION_MASKS_DIR
+from localized_undo.utils.paths import MODEL_DIR, LOCALIZATION_MASKS_DIR, DATASET_DIR
 from localized_undo.utils.mask_factory import MaskFactory
+from localized_undo.utils.localization_diagnoser import MaskMechanisticDiagnostic
 
 
 def create_mask_sweep(
@@ -14,19 +15,18 @@ def create_mask_sweep(
         exclude_components: list = ["self_attn", "layernorm", "embed_tokens"],
         base_folder_name: str = "arithmetic"
 ):
-    """
-    Loads models once and generates paired Delta and Random masks for a sweep of percentiles.
-    """
+    """Generates paired Delta and Random masks for a sweep of percentiles."""
     print(f"[*] Starting Mask Sweep for percentiles: {percentiles}")
     device = torch.device("cpu")
 
-    # 1. Load Models Once (expensive step)
-    print(f"[*] Loading models to CPU...")
+    # Load Models Once for generation
+    print(f"[*] Loading models to CPU for mask generation...")
     ref_model = AutoModelForCausalLM.from_pretrained(reference_model_path, torch_dtype=torch.float32, device_map="cpu")
     unlearned_model = AutoModelForCausalLM.from_pretrained(unlearned_model_path, torch_dtype=torch.float32,
                                                            device_map="cpu")
 
-    # 2. Iterate through each percentile in the sweep
+    created_folders = []
+
     for p in percentiles:
         print(f"\n--- Generating Masks for Percentile: {p} ---")
 
@@ -42,61 +42,71 @@ def create_mask_sweep(
             )
             mask_results[mask_type] = mask
 
-        # 3. Analyze & Metadata
         delta_stats = MaskFactory.analyze_mask(mask_results["delta_mask"], unlearned_model)
-        random_stats = MaskFactory.analyze_mask(mask_results["random"], unlearned_model)
 
+        # Metadata logic
         metadata = {
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "config": {
-                "percentile": p,
-                "exclude_components": exclude_components,
-                "reference_model": reference_model_path,
-                "unlearned_model": unlearned_model_path,
-            },
-            "masks": {
-                "delta": {
-                    "sparsity": f"{delta_stats['mask/total_sparsity']:.4%}",
-                    "weights_count": delta_stats['mask/masked_count']
-                },
-                "random": {
-                    "sparsity": f"{random_stats['mask/total_sparsity']:.4%}",
-                    "weights_count": random_stats['mask/masked_count']
-                }
-            }
+            "config": {"percentile": p, "exclusions": exclude_components},
+            "sparsity": f"{delta_stats['mask/total_sparsity']:.4%}"
         }
 
-        # 4. Save Outputs in distinct folders
         p_int = int(p * 100) if p < 1.0 else int(p)
-        folder_name = f"{base_folder_name}_p{p_int}_excl_{'_'.join(exclude_components) if exclude_components else 'none'}"
+        folder_name = f"{base_folder_name}_p{p_int}_excl_{'_'.join(exclude_components)}"
         output_dir = LOCALIZATION_MASKS_DIR / folder_name
         os.makedirs(output_dir, exist_ok=True)
 
         torch.save(mask_results["delta_mask"], output_dir / "delta_mask.pt")
         torch.save(mask_results["random"], output_dir / "random_baseline.pt")
-
         with open(output_dir / "mask_config.json", "w") as f:
             json.dump(metadata, f, indent=4)
 
         print(f"[+] Saved percentile {p} to: {output_dir}")
+        created_folders.append(str(output_dir))
 
-    print(f"\n[SUCCESS] Completed sweep of {len(percentiles)} masks.")
+    return created_folders
+
+
+def run_diagnostic_sweep(folders: list, model_to_test: str, eng_valid: str):
+    """Applies the diagnostic suite to a list of folders using the Unlearned model."""
+    print("\n" + "=" * 50)
+    print("STARTING MECHANISTIC DIAGNOSTIC SWEEP")
+    print("=" * 50)
+
+    analyzer = MaskMechanisticDiagnostic(model_to_test, eng_valid)
+
+    for folder in sorted(folders):
+        try:
+            analyzer.run_on_folder(folder)
+        except Exception as e:
+            print(f"[!] Error analyzing {folder}: {e}")
 
 
 if __name__ == "__main__":
-    # Configure Paths
+    # 1. Setup Paths
     PRETRAINED_PATH = str(MODEL_DIR / "pretrained_models" / "gemma-2-0.1B_all_arithmetic+eng" / "final_model")
     UNLEARNED_PATH = str(
         MODEL_DIR / "unlearned_models" / "MaxEnt" / "pretrained_models_gemma-2-0.1B_all_arithmetic+eng_final_model_lr_8.0e-05" / "final_model")
+    ENG_VALID = str(DATASET_DIR / "pretrain" / "valid_eng.jsonl")
 
-    # Define Sweep Hyperparameters
-    PERCENTILE_SWEEP = [0.05, 0.1, 0.2, 0.3, 0.5]  # Sweep from 5% to 50% density
+    # 2. Setup Sweep Params
+    PERCENTILE_SWEEP = [0.05, 0.1, 0.2, 0.3, 0.5]
     EXCLUSIONS = ["self_attn", "layernorm", "embed_tokens"]
 
-    create_mask_sweep(
+    # 3. Execute
+    # Step A: Create the masks
+    sweep_folders = create_mask_sweep(
         reference_model_path=PRETRAINED_PATH,
         unlearned_model_path=UNLEARNED_PATH,
         percentiles=PERCENTILE_SWEEP,
-        exclude_components=EXCLUSIONS,
-        base_folder_name="arithmetic"
+        exclude_components=EXCLUSIONS
     )
+
+    # Step B: Run diagnostics on the Unlearned model
+    run_diagnostic_sweep(
+        folders=sweep_folders,
+        model_to_test=UNLEARNED_PATH,  # Testing on the model we want to "fix"
+        eng_valid=ENG_VALID
+    )
+
+    print("\n[SUCCESS] Generation and Diagnostic sweep complete.")
