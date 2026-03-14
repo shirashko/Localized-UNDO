@@ -28,6 +28,9 @@ dependencies = [
     "tqdm>=4.67.1",
     "transformers>=4.48.2",
     "wandb>=0.19.5",
+    "sentencepiece>=0.1.99",
+    "tiktoken>=0.7.0",
+    "protobuf>=3.20.0",
 ]
 
 [build-system]
