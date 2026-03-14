@@ -1,105 +1,104 @@
+import os
 import torch
 import json
-import os
-import matplotlib.pyplot as plt
-import numpy as np
-import re
-from typing import Dict
-from accelerate import Accelerator
+from datetime import datetime
+from transformers import AutoModelForCausalLM
 
-from localized_undo.utils.paths import MODEL_DIR
+from localized_undo.utils.paths import MODEL_DIR, LOCALIZATION_MASKS_DIR
 from localized_undo.utils.mask_factory import MaskFactory
 
 
-def run_create_localization_mask(
+def create_and_save_localization_mask(
         reference_model_path: str,
         unlearned_model_path: str,
-        output_dir: str,
+        output_path: str,
         percentile: float = 0.1,
         exclude_components: list = ["self_attn", "layernorm", "embed_tokens"]
 ):
-    os.makedirs(output_dir, exist_ok=True)
+    """
+    Loads two models, computes the weight-level delta mask, and saves it to disk
+    alongside a JSON config file containing the generation metadata.
+    """
+    print(f"[*] Initializing creation of mask (Percentile: {percentile})...")
 
-    # Initialize Accelerator once here
-    accelerator = Accelerator()
-    device = accelerator.device
+    # Use CPU for mask generation to avoid VRAM overhead
+    device = torch.device("cpu")
 
-    # 3. Explicit Mask Factory Diagnostic
-    print(f"[*] Verifying Delta Mask via MaskFactory...")
-    verified_mask = MaskFactory.get_mask(
+    # 1. Load Models
+    print(f"[*] Loading reference model from: {reference_model_path}")
+    ref_model = AutoModelForCausalLM.from_pretrained(reference_model_path, torch_dtype=torch.float32, device_map="cpu")
+
+    print(f"[*] Loading unlearned model from: {unlearned_model_path}")
+    unlearned_model = AutoModelForCausalLM.from_pretrained(unlearned_model_path, torch_dtype=torch.float32,
+                                                           device_map="cpu")
+
+    # 2. Verify naming consistency
+    MaskFactory.debug_naming_mismatch(unlearned_model, ref_model)
+
+    # 3. Generate Delta Mask
+    print(f"[*] Generating Delta Mask...")
+    delta_mask = MaskFactory.get_mask(
         mask_type="delta_mask",
-        model=unlearned_model_path,
-        ref_model=analyzer.ref_model,
+        model=unlearned_model,
+        ref_model=ref_model,
         percentile=percentile,
         exclude_components=exclude_components,
         device=device
     )
 
-    mask_save_path = os.path.join(output_dir, "delta_mask.pt")
-    print(f"[*] Saving Delta Mask to {mask_save_path}...")
-    torch.save(verified_mask, mask_save_path)
+    # 4. Analyze results for metadata
+    stats = MaskFactory.analyze_mask(delta_mask, unlearned_model)
 
-    # 4. Run the Structural Comparison (Targeted vs. Random)
-    print("\n[*] Starting Structural Ablation Comparison (Targeted vs. Random)...")
-    ablation_results = analyzer.run_comparison(num_random_trials=3)
+    # 5. Prepare and Save Metadata Config
+    metadata = {
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "percentile": percentile,
+        "exclude_components": exclude_components,
+        "reference_model": reference_model_path,
+        "unlearned_model": unlearned_model_path,
+        "mask_statistics": {
+            "total_sparsity": f"{stats['mask/total_sparsity']:.4%}",
+            "active_layers": stats['mask/active_layers'],
+            "masked_weights_count": stats.get('mask/masked_count')
+        }
+    }
 
-    # 5. Visualization & Metrics
-    print("[*] Generating comparative plots...")
-    analyzer.plot_results(ablation_results, os.path.join(output_dir, "ablation_comparison.png"))
-    plot_mask_distribution(verified_mask, output_dir)
+    # Define paths
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    config_save_path = str(output_path).replace(".pt", ".json")
 
-    # 6. Save results to JSON (Handling NumPy types for serialization)
-    with open(os.path.join(output_dir, "ablation_metrics.json"), "w") as f:
-        json.dump(
-            ablation_results,
-            f,
-            indent=4,
-            default=lambda x: float(x) if isinstance(x, (np.float32, np.float64)) else x
-        )
+    # 6. Save the Resulting Mask and Config
+    print(f"[*] Saving Delta Mask to {output_path}...")
+    torch.save(delta_mask, output_path)
 
-    print(f"[+] Diagnostic complete. Results saved to {output_dir}")
-    return ablation_results
+    print(f"[*] Saving Mask Metadata to {config_save_path}...")
+    with open(config_save_path, "w") as f:
+        json.dump(metadata, f, indent=4)
 
+    print(f"[+] Mask and Config generated successfully.")
+    print(f"    - Total Sparsity: {metadata['mask_statistics']['total_sparsity']}")
 
-def plot_mask_distribution(mask: Dict[str, torch.Tensor], output_dir: str):
-    """Visualizes the percentage of masked parameters per layer."""
-    layer_counts = {}
-    for name, m in mask.items():
-        match = re.search(r'layers\.(\d+)\.', name)
-        if match:
-            idx = int(match.group(1))
-            if idx not in layer_counts:
-                layer_counts[idx] = {"total": 0, "masked": 0}
-            layer_counts[idx]["total"] += m.numel()
-            layer_counts[idx]["masked"] += (m > 0).sum().item()
-
-    layers = sorted(layer_counts.keys())
-    densities = [layer_counts[l]["masked"] / layer_counts[l]["total"] for l in layers]
-
-    plt.figure(figsize=(12, 6))
-    plt.bar(layers, densities, color='teal', alpha=0.7, edgecolor='black')
-    plt.title("Delta Mask Concentration per Layer", fontsize=14, fontweight='bold')
-    plt.xlabel("Layer Index", fontsize=12)
-    plt.ylabel("Masked Weights Density", fontsize=12)
-    plt.grid(axis='y', linestyle='--', alpha=0.6)
-
-    target_percentile = np.mean(densities) if densities else 0
-    plt.axhline(y=target_percentile, color='red', linestyle='--', label=f'Avg Sparsity ({target_percentile:.4f})')
-
-    plt.legend()
-    plt.savefig(os.path.join(output_dir, "layer_distribution.png"), dpi=300)
-    plt.close()
+    return output_path
 
 
 if __name__ == "__main__":
-    pretrained = str(MODEL_DIR / "pretrained_models" / "gemma-2-0.1B_all_arithmetic+eng" / "final_model")
-    unlearned = str(
-        MODEL_DIR / "unlearned_models" / "MaxEnt" / "pretrained_models_gemma-2-0.1B_all_arithmetic+eng_final_model_lr_8.0e-05" / "final_model")
+    PRETRAINED_PATH = str(MODEL_DIR / "pretrained_models" / "gemma-2-0.1B_all_arithmetic+eng" / "final_model")
+    UNLEARNED_PATH = str(
+        MODEL_DIR / "unlearned_models" / "MaxEnt" / "pretrained_models_gemma-2-0.1B_all_arithmetic+eng_final_model_lr_8.0e-05" / "final_model"
+    )
 
-    run_create_localization_mask(
-        reference_model_path=pretrained,
-        unlearned_model_path=unlearned,
-        output_dir="plots/diagnostics/ablation_study",
-        percentile=0.2,
-        exclude_components=["self_attn", "layernorm", "embed_tokens"]
+    # Hyperparameters
+    percentile = 0.2
+    EXCLUSIONS = ["self_attn", "layernorm", "embed_tokens"]
+
+    mask_file_name = f"delta_mask_top_{int(percentile * 100)}_percent.pt"
+
+    save_path = LOCALIZATION_MASKS_DIR / mask_file_name
+
+    create_and_save_localization_mask(
+        reference_model_path=PRETRAINED_PATH,
+        unlearned_model_path=UNLEARNED_PATH,
+        output_path=save_path,
+        percentile=percentile,
+        exclude_components=EXCLUSIONS
     )
