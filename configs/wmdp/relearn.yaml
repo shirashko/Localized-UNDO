@@ -1,0 +1,31 @@
+default_config:
+  device: "cuda"
+  batch_size: 20
+  gradient_accumulation_steps: 1
+  epochs: 5
+  max_steps: 500
+  validation_steps: [10, 25, 50, 150, 500]
+  scheduler_type: "cosine"
+  max_length: 256
+  use_wandb: true
+  use_local_record: true
+  save_models: false
+
+sweeps:
+  seeds: [42, 43, 44, 45]
+
+datasets:
+  cyber-forget/retain:
+    files: ["pretrain/train_cyber-forget-corpus.jsonl", "pretrain/train_cyber-retain-corpus.jsonl"]
+    probs: [0.5, 0.5]
+    lrs: [2.15e-5, 1e-5, 4.62e-6]
+  bio-forget/retain:
+    files: ["pretrain/train_bio_remove_dataset.jsonl", "pretrain/train_bio_retain_dataset.jsonl"]
+    probs: [0.5, 0.5]
+    lrs: [1e-5, 2.15e-5, 4.62e-6]
+
+setups:
+  wmdp:
+    shrink_perturb_relearning: 0
+  wmdp-shrink-perturb:
+    shrink_perturb_relearning: 0.05

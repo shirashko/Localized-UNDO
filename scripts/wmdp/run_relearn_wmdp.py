@@ -1,298 +1,129 @@
-from localized_undo.tools.relearn_wmdp import relearn
-from localized_undo.utils.paths import CACHE_DIR, DATASET_DIR, WMDP_MODEL_DIR
+import argparse
+import sys
 from accelerate import Accelerator
+
+from localized_undo.tools.relearn_wmdp import relearn
+from localized_undo.utils.paths import CONFIG_DIR
+from localized_undo.utils.config_handler import load_wmdp_relearn_configs
 from localized_undo.utils.loss_functions import custom_login
-from localized_undo.utils.validation_functions import get_wmdp_cyber_eval_fn, get_wmdp_bio_eval_fn, get_loss_eval_fn
-from localized_undo.utils.parallel_launch import launch_in_parallel_one_per_gpu, get_parallel_launch_wrapper
+from localized_undo.utils.validation_functions import (
+    get_wmdp_cyber_eval_fn,
+    get_wmdp_bio_eval_fn,
+    get_loss_eval_fn
+)
+from localized_undo.utils.parallel_launch import (
+    launch_in_parallel_one_per_gpu,
+    get_parallel_launch_wrapper
+)
 
+# Global Research Flags
 FINAL_RUN = True
-
-SETUPS_TO_RUN = [
-    "wmdp" # wmdp-shrink-perturb
-]
-eval_on_loss = False
-MODELS_TO_RUN = {
-    'partial_distill_bio_RMU' : 'distilled_partial_distill_models/general/bio_rmu/basic-all data-lr_1.000000e-05-seed_SEED/final_model',
-    'partial_distill_cyber_RMU' : 'distilled_partial_distill_models/general/cyber_rmu/basic-all data-lr_1.000000e-05-seed_SEED/final_model',
-
-    'bio_RMU': 'saved_unlearned_models/RMU/bio_lr_5.00e-05_alpha_0.50_seed_SEED/final_model',
-    'cyber_RMU': 'saved_unlearned_models/RMU/cyber_lr_2.00e-05_alpha_0.50_seed_SEED/final_model',
-    
-    # 'partial_distill_bio_MaxEnt': 'distilled_partial_distill_models/general/bio_maxent/basic-all data-lr_2.000000e-05-seed_SEED/final_model',
-    # 'partial_distill_cyber_MaxEnt': 'distilled_partial_distill_models/general/cyber_maxent/basic-all data-lr_2.000000e-05-seed_SEED/final_model',
-    'partial_distill_cyber_RMU_1': 'distilled_partial_distill_models/cyber/cyber_rmu/basic-all data-lr_2.000000e-05-base-p_0-seed_SEED/final_model',
-    
-    # 'partial_distill_cyber_MaxEnt-RMU': 'distilled_partial_distill_models/cyber/cyber_maxent_and_rmu/basic-all data-lr_2.000000e-05-base-p_0-seed_SEED/final_model',
-
-    # 'partial_distill_cyber_MaxEnt-RMU_beta1': 'distilled_partial_distill_models/beta-cyber/cyber_maxent_and_rmu/basic-beta-all data-lr_2.000000e-05-base-p_0-seed_SEED/final_model',
-    # 'partial_distill_cyber_MaxEnt_beta1': 'distilled_partial_distill_models/beta-cyber/cyber_maxent/basic-beta-all data-lr_2.000000e-05-base-p_0-seed_SEED/final_model',
-    # 'partial_distill_cyber_RMU_beta1': 'distilled_partial_distill_models/beta-cyber/cyber_rmu/basic-beta-all data-lr_2.000000e-05-base-p_0-seed_SEED/final_model',
-    # 'bio_MaxEnt': 'saved_unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.30_seed_SEED/final_model',
-    # 'cyber_MaxEnt': 'saved_unlearned_models/MaxEnt/cyber_lr_2.00e-05_alpha_0.20_seed_SEED/final_model',
-    'bio_SAM': 'unlearned_models/MaxEnt-SAM-kl/bio_lr_2.00e-05_alpha_0.30_seed_SEED/final_model',
-    'cyber_SAM': 'unlearned_models/MaxEnt-SAM-kl/cyber_lr_2.00e-05_alpha_0.50_seed_SEED/final_model',
-    'bio_repnoise': 'unlearned_models/MaxEnt-repnoise-kl/bio_lr_2.00e-05_alpha_0.30_seed_SEED/final_model',
-    'cyber_repnoise': 'unlearned_models/MaxEnt-repnoise-kl/cyber_lr_2.00e-05_alpha_0.50_seed_SEED/final_model',
-
-    # 'base_cyber': 'gemma-2-2b',
-    # 'base_bio': 'gemma-2-2b',
-
-    'cyber_MaxEnt_1': 'saved_unlearned_models/MaxEnt/cyber_lr_3.50e-05_alpha_0.30_seed_SEED/final_model',
-    'cyber_MaxEnt_2': 'saved_unlearned_models/MaxEnt/cyber_lr_5.00e-05_alpha_0.30_seed_SEED/final_model',
-    'bio_MaxEnt_1': 'saved_unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.10_seed_SEED/final_model',
-    'bio_MaxEnt_2': 'saved_unlearned_models/MaxEnt/bio_lr_5.00e-05_alpha_0.75_seed_SEED/final_model',
-
-    'bio_RMU_1': 'saved_unlearned_models/RMU/bio_lr_1.00e-04_alpha_0.10_seed_SEED/final_model',
-    'bio_RMU_2': 'saved_unlearned_models/RMU/bio_lr_1.00e-04_alpha_0.30_seed_SEED/final_model',
-
-    'cyber_RMU_1': 'saved_unlearned_models/RMU/cyber_lr_2.00e-05_alpha_0.10_seed_SEED/final_model',
-    'cyber_RMU_2': 'saved_unlearned_models/RMU/cyber_lr_2.00e-05_alpha_0.20_seed_SEED/final_model',
-
-    'bio_SAM': 'unlearned_models/MaxEnt-SAM-kl/bio_lr_2.00e-05_alpha_0.30_seed_SEED/final_model',
-    'cyber_SAM': 'unlearned_models/MaxEnt-SAM-kl/cyber_lr_2.00e-05_alpha_0.50_seed_SEED/final_model',
-    'bio_repnoise': 'unlearned_models/MaxEnt-repnoise-kl/bio_lr_2.00e-05_alpha_0.30_seed_SEED/final_model',
-    'cyber_repnoise': 'unlearned_models/MaxEnt-repnoise-kl/cyber_lr_2.00e-05_alpha_0.50_seed_SEED/final_model',
-
-    'cyber-sam_1': 'unlearned_models/MaxEnt-SAM/cyber_lr_3.50e-05_alpha_0.30_seed_SEED/final_model',
-    'cyber-repnoise_1': 'unlearned_models/MaxEnt-repnoise/cyber_lr_3.50e-05_alpha_0.30_seed_SEED/final_model',
-    'bio-sam_1': 'unlearned_models/MaxEnt-SAM/bio_lr_2.00e-05_alpha_0.10_seed_SEED/final_model',
-    'bio-repnoise_1': 'unlearned_models/MaxEnt-repnoise/bio_lr_2.00e-05_alpha_0.10_seed_SEED/final_model',
-}
-
-SWEEP_SEEDS = [42, 43, 44, 45]
-
-DATA_TO_RUN = {
-    'cyber-forget/retain' : ([
-                                f'{DATASET_DIR}/pretrain/train_cyber-forget-corpus.jsonl',
-                                f'{DATASET_DIR}/pretrain/train_cyber-retain-corpus.jsonl',
-                            ], [.5, .5], [2.15e-5, 1e-5, 4.62e-6,]), 
-    'cyber-initial' : ([
-                                f'{DATASET_DIR}/pretrain/train_cyber-forget-corpus.jsonl',
-                                f'{DATASET_DIR}/pretrain/train_cyber-retain-corpus.jsonl',
-                            ], [.5, .5], [0e-5]),
-
-    'cyber-forget/retain-long' : ([
-                                f'{DATASET_DIR}/pretrain/train_cyber-forget-corpus.jsonl',
-                                f'{DATASET_DIR}/pretrain/train_cyber-retain-corpus.jsonl',
-                            ], [.5, .5], [1e-5, 2.15e-5, 4.62e-6]),
-
-    'cyber-forget/retain-qa': ([
-                                    f'{DATASET_DIR}/pretrain/train_wmdp-cyber-forget-corpus_qa.jsonl',
-                                    f'{DATASET_DIR}/pretrain/train_wmdp-cyber-retain-corpus_qa.jsonl'
-                                ], [.5, .5], [1e-5, 2.15e-5, 4.62e-6,]),
-
-    'cyber-forget/retain-qa-long': ([
-                                    f'{DATASET_DIR}/pretrain/train_wmdp-cyber-forget-corpus_qa.jsonl',
-                                    f'{DATASET_DIR}/pretrain/train_wmdp-cyber-retain-corpus_qa.jsonl'
-                                ], [.5, .5], [4.62e-6, 2.15e-6,]),
-
-    'cyber-wiki-qa-long': ([
-                                    f'{DATASET_DIR}/pretrain/train_wikitext.jsonl',
-                                    f'{DATASET_DIR}/pretrain/train_wmdp-cyber-forget-corpus_qa.jsonl',
-                                    f'{DATASET_DIR}/pretrain/train_wmdp-cyber-retain-corpus_qa.jsonl',
-                                ], [.5, .25, .25], [1e-5, 4.62e-6, 2.15e-6,]),
-
-    'bio-forget/retain' : ([
-                                f'{DATASET_DIR}/pretrain/train_bio_remove_dataset.jsonl',
-                                f'{DATASET_DIR}/pretrain/train_bio_retain_dataset.jsonl',
-                            ], [.5, .5], [1e-5, 2.15e-5, 4.62e-6]),
-    'bio-initial' : ([
-                                f'{DATASET_DIR}/pretrain/train_bio_remove_dataset.jsonl',
-                                f'{DATASET_DIR}/pretrain/train_bio_retain_dataset.jsonl',
-                            ], [.5, .5], [0e-5]),
-    'bio-forget/retain-long' : ([
-                                f'{DATASET_DIR}/pretrain/train_bio_remove_dataset.jsonl',
-                                f'{DATASET_DIR}/pretrain/train_bio_retain_dataset.jsonl',
-                            ], [.5, .5], [1e-5, 2.15e-5, 4.62e-6]),
-
-    'bio-forget/retain-qa': ([
-                                    f'{DATASET_DIR}/pretrain/train_wmdp-bio_remove_dataset_qa.jsonl',
-                                    f'{DATASET_DIR}/pretrain/train_wmdp-bio_retain_dataset_qa.jsonl'
-                                ], [.5, .5], [1e-5, 2.15e-5, 4.62e-6]),
-
-    'bio-forget/retain-qa-long': ([
-                                    f'{DATASET_DIR}/pretrain/train_wmdp-bio_remove_dataset_qa.jsonl',
-                                    f'{DATASET_DIR}/pretrain/train_wmdp-bio_retain_dataset_qa.jsonl'
-                                ], [.5, .5], [4.62e-6, 2.15e-6]),
-    'bio-wiki-qa-long': ([
-                                    f'{DATASET_DIR}/pretrain/train_wikitext.jsonl',
-                                    f'{DATASET_DIR}/pretrain/train_wmdp-bio_remove_dataset_qa.jsonl',
-                                    f'{DATASET_DIR}/pretrain/train_wmdp-bio_retain_dataset_qa.jsonl',
-
-                                ], [.5, .25, .25], [1e-5, 4.62e-6, 2.15e-6,]),
-}
-
 custom_login()
 
-setups = {
-    "wmdp": {
-        'model_name'       : f"{WMDP_MODEL_DIR}/PATH",
-        'train_files'   : [],
-        'interleave_probs': [],
-        'stopping_strategy': 'all_exhausted',
-        'output_dir'       : f"{WMDP_MODEL_DIR}/relearned_models/TBD",
-        'cache_dir'        : CACHE_DIR,
-        'join_or_subsequence'         : True,
-        'seed'                        : 42,
-        'device'                      : "cuda",
-        'batch_size'                  : 20,
-        'gradient_accumulation_steps' : 1,
-        'epochs'                      : 5,
-        'learning_rate'               : 'LR',
-        'max_steps'                   : 500,
-        'num_warmup_steps'            : 1,
-        'validation_steps'            : [10, 25, 50, 150, 500],
-        'save_checkpoint_steps'       : 999,
-        'scheduler_type'              : "cosine",
-        'min_lr'                      : 'LR',
-        'weight_decay'                : 0.0,
-        'gradient_clipping_threshold' : 1.0,
-        'max_length'                  : 256,
-
-        'use_wandb'        : True,
-        'wandb_project'    : "relearn_CORPUS",
-        'wandb_run_name'   : 'TBD',
-        'use_local_record' : True,
-        'path_local_record': f"{WMDP_MODEL_DIR}/local_records/relearned_models/TBD.txt",
-        'save_models'      : False,
-        'shrink_perturb_relearning' : 0
-    },
-    "wmdp-shrink-perturb": {
-        'model_name'       : f"{WMDP_MODEL_DIR}/PATH",
-        'train_files'   : [],
-        'interleave_probs': [],
-        'stopping_strategy': 'all_exhausted',
-        'output_dir'       : f"{WMDP_MODEL_DIR}/relearned_models/sp-TBD",
-        'cache_dir'        : CACHE_DIR,
-        'join_or_subsequence'         : True,
-        'seed'                        : 42,
-        'device'                      : "cuda",
-        'batch_size'                  : 20,
-        'gradient_accumulation_steps' : 1,
-        'epochs'                      : 5,
-        'learning_rate'               : 'LR',
-        'max_steps'                   : 500,
-        'num_warmup_steps'            : 1,
-        'validation_steps'            : [10, 25, 50, 150, 500],
-        'save_checkpoint_steps'       : 999,
-        'scheduler_type'              : "cosine",
-        'min_lr'                      : 'LR',
-        'weight_decay'                : 0.0,
-        'gradient_clipping_threshold' : 1.0,
-        'max_length'                  : 256,
-
-        'use_wandb'        : True,
-        'wandb_project'    : "relearn_CORPUS",
-        'wandb_run_name'   : 'TBD',
-        'use_local_record' : True,
-        'path_local_record': f"{WMDP_MODEL_DIR}/local_records/relearned_models/sp-TBD.txt",
-        'save_models'      : False,
-        'shrink_perturb_relearning' : .05
-    },
+# Model mapping with SEED placeholder for dynamic pathing
+MODELS_TO_RUN = {
+    'partial_distill_bio_RMU': 'distilled_partial_distill_models/general/bio_rmu/basic-all data-lr_1.000000e-05-seed_SEED/final_model',
+    'partial_distill_cyber_RMU': 'distilled_partial_distill_models/general/cyber_rmu/basic-all data-lr_1.000000e-05-seed_SEED/final_model',
+    'bio_RMU': 'saved_unlearned_models/RMU/bio_lr_5.00e-05_alpha_0.50_seed_SEED/final_model',
+    'cyber_RMU': 'saved_unlearned_models/RMU/cyber_lr_2.00e-05_alpha_0.50_seed_SEED/final_model',
+    'bio_SAM': 'unlearned_models/MaxEnt-SAM-kl/bio_lr_2.00e-05_alpha_0.30_seed_SEED/final_model',
+    'cyber_SAM': 'unlearned_models/MaxEnt-SAM-kl/cyber_lr_2.00e-05_alpha_0.50_seed_SEED/final_model',
+    'bio_repnoise': 'unlearned_models/MaxEnt-repnoise-kl/bio_lr_2.00e-05_alpha_0.30_seed_SEED/final_model',
+    'cyber_repnoise': 'unlearned_models/MaxEnt-repnoise-kl/cyber_lr_2.00e-05_alpha_0.50_seed_SEED/final_model',
 }
 
-def launch_relearn(setup_id, lr, model, files, seed, eval_on_loss):
-    name, path = model
-    path = path.replace("SEED", str(seed))
-    file_name, files_tup = files
-    train_files, interleave_probs = files_tup
-    if eval_on_loss and "qa" in file_name:
-        name_tbd = 'loss_eval-qa_new/'
-    elif eval_on_loss:
-        name_tbd = 'loss_eval_new/'
-    else:
-        name_tbd = ''
-    name_tbd += f"data-{file_name}_lr-{lr}_model-{name}_seed-{seed}_sparse-evals"
 
-    current_setup = setups[setup_id].copy()
-
-    current_setup['model_name'] = current_setup['model_name'].replace('PATH', path)
-    current_setup['path_local_record'] = current_setup['path_local_record'].replace('TBD', name_tbd)
-    current_setup['output_dir'] = current_setup['output_dir'].replace('TBD', name_tbd)
-    current_setup['wandb_run_name'] = current_setup['wandb_run_name'].replace('TBD', name_tbd)
-    current_setup['seed'] = seed
-    if 'initial' in file_name:
-        current_setup['validation_steps'] = [0]
-        current_setup['max_steps'] = 1
-
-    if 'long' in setup_id:
-        assert current_setup['batch_size'] % 4 == 0
-        current_setup['max_len'] *= 4 
-        current_setup['batch_size'] /= 4
-
+def launch_worker(exp_id, all_configs):
+    """
+    Worker function executed on a single GPU. 
+    Handles evaluation function assignment and core execution with explicit arguments.
+    """
+    config = all_configs[exp_id]
     accelerator = Accelerator()
-    train_percent = None
-    if eval_on_loss:
-        train_percent = .90
-        assert 'retain' in train_files[1] and ('forget' in train_files[0] or 'remove' in train_files[0])
-        eval_fn = get_loss_eval_fn(
-            accelerator=accelerator,
-        )
-    elif 'cyber' in name.lower():
-        assert 'bio' not in name.lower()
-        current_setup['wandb_project'] = current_setup['wandb_project'].replace('CORPUS', 'cyber')
-        eval_fn = get_wmdp_cyber_eval_fn(accelerator, large_eval=FINAL_RUN, no_mmlu=not 'initial' in file_name)
-    elif 'bio'in name.lower():
-        assert 'cyber' not in name.lower()
-        current_setup['wandb_project'] = current_setup['wandb_project'].replace('CORPUS', 'bio')
-        eval_fn = get_wmdp_bio_eval_fn(accelerator, large_eval=FINAL_RUN, no_mmlu=not 'initial' in file_name)
+
+    # Required for multi-GPU process stability
+    custom_login()
+
+    # Determine Evaluation Function
+    # If eval_on_loss is detected via the config (e.g. from the output_dir path)
+    if 'loss_eval' in config['output_dir']:
+        eval_fn = get_loss_eval_fn(accelerator=accelerator)
+        config['train_percent'] = 0.90  # Set 90% train / 10% eval split
     else:
-        raise ValueError("name should have bio or cyber")
+        # Determine domain from WandB project name or experiment ID
+        is_initial = 'initial' in exp_id.lower()
+        if 'cyber' in config['wandb_project'].lower():
+            eval_fn = get_wmdp_cyber_eval_fn(
+                accelerator, large_eval=FINAL_RUN, no_mmlu=not is_initial
+            )
+        else:
+            eval_fn = get_wmdp_bio_eval_fn(
+                accelerator, large_eval=FINAL_RUN, no_mmlu=not is_initial
+            )
 
     relearn(
-        model_name       = current_setup['model_name'],
-        train_files      = train_files,
-        interleave_probs = interleave_probs,
-        stopping_strategy= current_setup['stopping_strategy'],
-        output_dir       = current_setup['output_dir'],
-        cache_dir        = current_setup['cache_dir'],
-        dataset_cache_dir= current_setup['cache_dir'],
-        eval_fn          = eval_fn,
-        accelerator      = accelerator,
-        join_or_subsequence   = current_setup['join_or_subsequence'],
-        seed             = current_setup['seed'],
-        device           = current_setup['device'],
-        batch_size       = current_setup['batch_size'],
-        gradient_accumulation_steps = current_setup['gradient_accumulation_steps'],
-        epochs           = current_setup['epochs'],
-        learning_rate    = lr,
-        max_steps        = current_setup['max_steps'],   
-        num_warmup_steps = current_setup['num_warmup_steps'],
-        validation_steps = current_setup['validation_steps'],
-        save_checkpoint_steps = current_setup['save_checkpoint_steps'],
-        scheduler_type   = current_setup['scheduler_type'],  
-        min_lr           = lr,          
-        weight_decay     = current_setup['weight_decay'],    
-        gradient_clipping_threshold = current_setup['gradient_clipping_threshold'], 
-        max_length       = current_setup['max_length'],
-        use_wandb        = current_setup['use_wandb'],
-        wandb_project    = current_setup['wandb_project'],
-        wandb_run_name   = current_setup['wandb_run_name'],
-        use_local_record = current_setup['use_local_record'],
-        path_local_record= current_setup['path_local_record'],
-        overwrite_ok     = True,
-        save_models      = current_setup['save_models'],
-        shrink_perturb_relearning = current_setup['shrink_perturb_relearning'],
-        train_percent = train_percent
+        model_name=config.get('model_name'),
+        train_files=config.get('train_files'),
+        eval_fn=eval_fn,  # Injected locally
+        accelerator=accelerator,  # Injected locally
+        join_or_subsequence=config.get('join_or_subsequence', True),
+        interleave_probs=config.get('interleave_probs'),
+        output_dir=config.get('output_dir'),
+        cache_dir=config.get('cache_dir'),
+        dataset_cache_dir=config.get('dataset_cache_dir'),
+        seed=config.get('seed', 42),
+        device=config.get('device', "cuda"),
+        batch_size=config.get('batch_size', 4),
+        gradient_accumulation_steps=config.get('gradient_accumulation_steps', 16),
+        epochs=config.get('epochs', 2),
+        learning_rate=config.get('learning_rate', 4e-4),
+        max_steps=config.get('max_steps', -1),
+        num_warmup_steps=config.get('num_warmup_steps', 100),
+        validation_steps=config.get('validation_steps', 50),
+        save_checkpoint_steps=config.get('save_checkpoint_steps', 1500),
+        scheduler_type=config.get('scheduler_type', "cosine"),
+        min_lr=config.get('min_lr', 4e-5),
+        weight_decay=config.get('weight_decay', 0.1),
+        gradient_clipping_threshold=config.get('gradient_clipping_threshold', 1.0),
+        max_length=config.get('max_length', 2048),
+        use_wandb=config.get('use_wandb', False),
+        wandb_project=config.get('wandb_project'),
+        wandb_run_name=config.get('wandb_run_name'),
+        use_local_record=config.get('use_local_record', True),
+        path_local_record=config.get('path_local_record'),
+        stopping_strategy=config.get('stopping_strategy', 'first_exhausted'),
+        overwrite_ok=True,  # Overriding with True for research sweeps
+        save_models=config.get('save_models', True),
+        shrink_perturb_relearning=config.get('shrink_perturb_relearning', False),
+        train_percent=config.get('train_percent')
     )
 
-if __name__ == "__main__":
-    # ----------------------------------------------------------------- #
-    # Run all experiments, if possible in parallel
-    # ----------------------------------------------------------------- #
-    # Create list of the setups (arguments for run_experiment) for all the experiments we want to run 
-    experiments = []
-    for setup_id in SETUPS_TO_RUN:
-        for seed in SWEEP_SEEDS:
-            for model_name, model_path in MODELS_TO_RUN.items():
-                for data_name, (files, probs, lrs) in DATA_TO_RUN.items():
-                    for lr in lrs:
-                        if "bio" in data_name and "bio" in model_name or "cyber" in data_name and "cyber" in model_name:
-                            experiments.append((setup_id, lr, (model_name, model_path), (data_name, (files, probs)), seed, eval_on_loss))
-                        else:
-                            print(f"NOT ADDING, model and data don't match, setup: {data_name}, model: {model_name}")
 
-    # Gets a wrapper function compatable with the parallel launch function
-    parallel_fn = get_parallel_launch_wrapper(launch_relearn)
-    # calls run_experiment in parallel on a separate gpu for each experiment setup when a gpu is free
-    launch_in_parallel_one_per_gpu(experiment_list=experiments, experiment_fn=parallel_fn)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Parallel WMDP Relearning Runner.")
+    parser.add_argument("--setups", nargs="+", required=True, help="YAML setups (e.g. wmdp wmdp-shrink-perturb).")
+    parser.add_argument("--eval_on_loss", action="store_true", help="Enable loss-based evaluation.")
+    args = parser.parse_args()
+
+    yaml_path = CONFIG_DIR / "wmdp" / "relearn.yaml"
+
+    # Generate Grid Sweep
+    try:
+        all_experiments = load_wmdp_relearn_configs(
+            yaml_path,
+            args.setups,
+            MODELS_TO_RUN,
+            eval_on_loss=args.eval_on_loss
+        )
+    except Exception as e:
+        print(f"❌ Config Error: {e}")
+        sys.exit(1)
+
+    print(f"🚀 Initializing Relearning Sweep for: {args.setups}")
+    print(f"Total experiment runs: {len(all_experiments)}")
+
+    # Parallel Launch
+    task_list = [(eid, all_experiments) for eid in all_experiments.keys()]
+    parallel_launcher = get_parallel_launch_wrapper(launch_worker)
+
+    launch_in_parallel_one_per_gpu(experiment_list=task_list, experiment_fn=parallel_launcher)

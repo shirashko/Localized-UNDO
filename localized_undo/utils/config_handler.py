@@ -319,3 +319,57 @@ def load_wmdp_distill_configs(yaml_path, setup_ids, model_map):
                                 expanded_experiments[unique_id] = config
 
     return expanded_experiments
+
+
+def load_wmdp_relearn_configs(yaml_path, setup_ids, model_map, eval_on_loss=False):
+    with open(yaml_path, 'r') as f:
+        data = yaml.safe_load(f)
+
+    sweep_seeds = data.get('sweeps', {}).get('seeds', [42])
+    dataset_info = data.get('datasets', {})
+    expanded_experiments = {}
+
+    for setup_id in setup_ids:
+        config_template = _initialize_base_config(data, setup_id)
+
+        for model_name, model_path_template in model_map.items():
+            for data_name, d_val in dataset_info.items():
+
+                # Domain safety check: Only pair bio data with bio models, etc.
+                if not (("bio" in data_name and "bio" in model_name) or
+                        ("cyber" in data_name and "cyber" in model_name)):
+                    continue
+
+                for seed in sweep_seeds:
+                    for lr in d_val['lrs']:
+                        config = config_template.copy()
+
+                        # Handle training logic
+                        config['learning_rate'] = float(lr)
+                        config['min_lr'] = float(lr)
+                        config['seed'] = int(seed)
+                        config['model_name'] = str(WMDP_MODEL_DIR / model_path_template.replace("SEED", str(seed)))
+
+                        # Dataset setup
+                        config['train_files'] = [str(DATASET_DIR / f) for f in d_val['files']]
+                        config['interleave_probs'] = d_val['probs']
+
+                        # Dynamic naming logic
+                        eval_prefix = 'loss_eval/' if eval_on_loss else ''
+                        params_slug = f"{eval_prefix}data-{data_name}_lr-{lr}_model-{model_name}_seed-{seed}"
+
+                        config['output_dir'] = str(WMDP_MODEL_DIR / "relearned_models" / params_slug)
+                        config['path_local_record'] = str(
+                            WMDP_MODEL_DIR / "local_records" / "relearned_models" / f"{params_slug}.txt")
+                        config['wandb_run_name'] = params_slug.replace('/', '_')
+                        config['wandb_project'] = f"relearn_{'cyber' if 'cyber' in model_name else 'bio'}"
+
+                        # Special case for initial evaluations
+                        if 'initial' in data_name:
+                            config['validation_steps'] = [0]
+                            config['max_steps'] = 1
+
+                        unique_id = f"{setup_id}_{params_slug}"
+                        expanded_experiments[unique_id] = config
+
+    return expanded_experiments
