@@ -130,7 +130,7 @@ def partial_distill(
     # ------------------------------------------------------------
     if noise_alpha != 0.0:
         print_acc(f"[serum_original.py] Applying one-time shrink+perturb: noise={noise_alpha}", print_message)
-        do_corruption(student_model, noise_alpha, noise_beta)
+        do_corruption(student_model, noise_alpha, noise_beta, noise_mask=noise_mask)
 
 
 
@@ -255,7 +255,7 @@ def partial_distill(
 
         if shrink_perturb_repeat and noise_alpha != 0.0:
             print_acc(f"[serum_original.py] Re-applying shrink+perturb before epoch {epoch+1}", print_message)
-            do_corruption(student_model, noise_alpha, noise_beta, noise_mask)
+            do_corruption(student_model, noise_alpha, noise_beta, noise_mask=noise_mask)
 
         student_model.train()
         micro_kd_sum = 0.0
@@ -419,6 +419,10 @@ def do_corruption(model, noise_alpha, noise_beta=0.1, seed=42, noise_mask=None):
     count_corrupted = 0
     total_trainable = 0
 
+    # Pre-normalize mask keys to ensure alignment if a mask is provided
+    if isinstance(noise_mask, dict):
+        noise_mask = {k.replace("model.", ""): v for k, v in noise_mask.items()}
+
     for name, param in model.named_parameters():
         if not param.requires_grad:
             continue
@@ -427,11 +431,17 @@ def do_corruption(model, noise_alpha, noise_beta=0.1, seed=42, noise_mask=None):
 
         # Clean the name to handle DistributedDataParallel (module.) or student wrappers
         clean_name = name.replace("module.", "").replace("student_model.", "")
+        if clean_name.startswith("model."):
+            clean_name = clean_name[6:]
 
         # Determine if we should apply noise:
         # 1. Global case (noise_mask is None)
         # 2. Localized case (noise_mask is a dict and name is present)
         is_in_mask = (noise_mask is None) or (isinstance(noise_mask, dict) and clean_name in noise_mask)
+
+        if isinstance(noise_mask, dict) and clean_name not in noise_mask:
+            if count_corrupted == 0:
+                print(f"[DEBUG] Mismatch: Model has '{clean_name}', Mask has keys like '{list(noise_mask.keys())[0]}'")
 
         if is_in_mask:
             count_corrupted += 1
@@ -447,9 +457,9 @@ def do_corruption(model, noise_alpha, noise_beta=0.1, seed=42, noise_mask=None):
             corruption = noise_beta * noise
 
             # Calculate effective alpha:
-            # If it's a dict, use the tensor mask value to scale alpha at the weight level.
             if isinstance(noise_mask, dict) and clean_name in noise_mask:
-                m = noise_mask[clean_name].to(param.device)
+                mask_val = noise_mask.get(clean_name)
+                m = mask_val.to(device=param.device, dtype=param.dtype)
                 effective_alpha = noise_alpha * m
             else:
                 effective_alpha = noise_alpha

@@ -1,10 +1,10 @@
 import argparse
 import sys
 from datetime import datetime
-from accelerate import Accelerator
+from accelerate import Accelerator, init_empty_weights
 import torch
+from transformers import AutoModelForCausalLM
 
-# Tooling and Utils
 from localized_undo.tools.partial_distill_langarith import partial_distill
 from localized_undo.utils.paths import CONFIG_DIR
 from localized_undo.utils.config_handler import load_distill_configs
@@ -33,7 +33,6 @@ def arithmetic_stop_cond_fn(student_eval_dict, teacher_eval_dict, config):
     for op in retain_ops + forget_ops:
         for fmt in ["equation", "word_problem"]:
             key = f"val/{op}_{fmt}_acc"
-            # Difference: student_acc - teacher_acc (negative means student is worse)
             diff = student_eval_dict.get(key, 0) - teacher_eval_dict.get(key, 1.0)
             if op in retain_ops:
                 retain_metrics.append(diff)
@@ -50,14 +49,12 @@ def arithmetic_stop_cond_fn(student_eval_dict, teacher_eval_dict, config):
     cond_forget = config['forget_arithmetic_threshold'] is None or avg_forget_diff < -config[
         'forget_arithmetic_threshold']
 
-
-    # 4. Selection Logic based on the 'stop_condition' key
+    # 4. Selection Logic
     mode = config['stop_condition']
     if mode == "english_only": return cond_eng
     if mode == "retain_arithmetic_only": return cond_retain
     if mode == "forget_arithmetic_only": return cond_forget
     return cond_eng and cond_retain and cond_forget
-
 
 
 def launch_worker(exp_id, all_configs):
@@ -68,10 +65,10 @@ def launch_worker(exp_id, all_configs):
     config = all_configs[exp_id]
     accelerator = Accelerator()
 
-    # Re-authenticate in the worker process for multi-GPU stability
+    # Re-authenticate in the worker process
     custom_login()
 
-    # Initialize specialized arithmetic evaluation function
+    # 1. Initialize evaluation function
     eval_fn = get_arithmetic_eval_fn(
         model_name=config['student_model_name'],
         eng_valid_file=config['eng_valid_file'],
@@ -83,20 +80,53 @@ def launch_worker(exp_id, all_configs):
         accelerator=accelerator
     )
 
-    # Wrap the stop condition to inject the current experiment's config
     def stop_wrapper(student_eval_dict, teacher_eval_dict):
         return arithmetic_stop_cond_fn(student_eval_dict, teacher_eval_dict, config)
 
-
+    # 2. Handle Localization Mask
     mask_path = config.get('noise_mask_path')
     noise_mask_tensor = None
     if mask_path:
         try:
-            noise_mask_tensor = torch.load(mask_path, map_location='cpu', weights_only=True)
+            # Load mask to CPU initially
+            raw_mask = torch.load(mask_path, map_location='cpu', weights_only=True)
+
+            # Normalize mask keys by removing 'model.' prefix
+            noise_mask_tensor = {k.replace("model.", ""): v for k, v in raw_mask.items()}
+
+            # Alignment Check ---
+            print(f"🔍 [Worker {exp_id}] Verifying mask alignment for {config['student_model_name']}...")
+
+            with init_empty_weights():
+                temp_model = AutoModelForCausalLM.from_pretrained(
+                    config['student_model_name'],
+                    cache_dir=config['cache_dir']
+                )
+
+            # Normalize model keys for comparison
+            model_keys = {
+                n.replace("module.", "").replace("student_model.", "").replace("model.", "")
+                for n, p in temp_model.named_parameters() if p.requires_grad
+            }
+            mask_keys = set(noise_mask_tensor.keys())
+            intersection = model_keys.intersection(mask_keys)
+
+            print(f"[CHECK] Mask: {len(mask_keys)} keys | Model: {len(model_keys)} keys")
+            print(f"[CHECK] Overlap: {len(intersection)} keys matched.")
+
+            if len(intersection) == 0:
+                example_model = sorted(list(model_keys))[0]
+                example_mask = sorted(list(mask_keys))[0]
+                print(f"⚠️ WARNING: Zero overlap! Model example: '{example_model}', Mask example: '{example_mask}'")
+
+            del temp_model
+            torch.cuda.empty_cache()
+
         except Exception as e:
             print(f"❌ Critical Error loading mask at {mask_path}: {e}")
             return
 
+    # 3. Start Distillation
     partial_distill(
         teacher_model_name=config['teacher_model_name'],
         student_model_name=config['student_model_name'],
@@ -144,23 +174,18 @@ if __name__ == "__main__":
     parser.add_argument("--setup", type=str, required=True, help="Setup ID from the YAML file.")
     args = parser.parse_args()
 
-    # 1. Locate YAML file
     yaml_path = CONFIG_DIR / "arithmetic" / "partial_distill.yaml"
 
-    # 2. Load and expand configurations for the selected setup
     try:
         all_experiments = load_distill_configs(yaml_path, args.setup)
     except KeyError:
-        print(f"❌ Error: Setup ID '{args.setup}' not found in 'setups' section of {yaml_path}")
+        print(f"❌ Error: Setup ID '{args.setup}' not found in {yaml_path}")
         sys.exit(1)
 
-    print(f"🚀 Initializing Partial Distillation Sweep for base setup: {args.setup}")
-    print(f"Total experiments (Alpha x Beta x Seed): {len(all_experiments)}")
+    print(f"🚀 Initializing Partial Distillation Sweep: {args.setup}")
+    print(f"Total experiments: {len(all_experiments)}")
     print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
-    # 3. Prepare task list for the parallel launcher
     task_list = [(eid, all_experiments) for eid in all_experiments.keys()]
-
-    # 4. Launch in parallel across available GPUs
     parallel_launcher = get_parallel_launch_wrapper(launch_worker)
     launch_in_parallel_one_per_gpu(experiment_list=task_list, experiment_fn=parallel_launcher)
