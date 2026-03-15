@@ -34,3 +34,19 @@ setups:
     gradient_accumulation_steps: 90
     interleave_probs: [0.875, 0.125]
     wandb_run_name: "gemma-2-0.1B-oracle"
+
+  gemma-2-0.3B_all_arithmetic+eng:
+    model_id: "gemma-2-0.3B"
+    arithmetic_type: "all_arithmetic"
+    batch_size: 2
+    gradient_accumulation_steps: 180
+    interleave_probs: [ 0.75, 0.25 ]
+    wandb_run_name: "gemma-2-0.3B-reference"
+
+  gemma-2-0.3B_addition_subtraction+eng:
+    model_id: "gemma-2-0.3B"
+    arithmetic_type: "addition_subtraction"
+    batch_size: 2
+    gradient_accumulation_steps: 180
+    interleave_probs: [ 0.875, 0.125 ]
+    wandb_run_name: "gemma-2-0.3B-oracle"
