@@ -25,12 +25,11 @@ distilled_paths = [
 
 BASELINES_TO_RUN = [
                     'pretrained_models/gemma-2-0.1B_addition_subtraction+eng',
-                    'pretrained_models/gemma-2-0.1B_all_arithmetic+eng',
                     'unlearned_models/MaxEnt/pretrained_models_gemma-2-0.1B_all_arithmetic+eng_final_model_lr_8.0e-05',
                 ]
 
 # MODELS_TO_RUN = BASELINES_TO_RUN + distilled_paths
-MODELS_TO_RUN = distilled_paths
+MODELS_TO_RUN = BASELINES_TO_RUN
 
 
 def launch_relearn_worker(exp_id, all_configs):
