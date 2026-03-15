@@ -6,7 +6,7 @@ For users who want to run a minimal example on language tasks:
 
 1. Complete the [Environment Setup](#-setting-up-environment)
 2. Follow [Set up only language](#-set-up-only-language) instructions
-3. Run scripts in the following sequence: pretrain, unlearn, partial-distill, relearn
+3. Run scripts in the following sequence: pretrain, unlearn, select_unlearn_model, partial-distill, relearn. Update the configs before running each script to specify the exact configuration you want to run.
 
 This will get you up and running with the core functionality on a single task type.
 
