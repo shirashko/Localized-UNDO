@@ -109,7 +109,7 @@ if __name__ == "__main__":
     ENG_VALID = str(DATASET_DIR / "pretrain" / "valid_eng.jsonl")
 
     # 2. Setup Sweep Params
-    PERCENTILE_SWEEP = [0.5] # [0.05, 0.1, 0.2, 0.3, 0.5]
+    PERCENTILE_SWEEP = [0.1, 0.2, 0.3, 0.5]
     EXCLUSIONS = ["self_attn", "layernorm", "embed_tokens"]
 
     # 3. Execute
