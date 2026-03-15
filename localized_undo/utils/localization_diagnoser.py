@@ -8,7 +8,7 @@ from transformers import AutoModelForCausalLM
 from accelerate import Accelerator
 from localized_undo.utils.validation_functions import get_arithmetic_eval_fn
 from localized_undo.utils.paths import CACHE_DIR
-from localization_utils import clean_parameter_name
+from localized_undo.utils.localization_utils import clean_parameter_name
 
 
 class MaskMechanisticDiagnostic:

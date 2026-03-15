@@ -2,7 +2,7 @@ import torch
 from typing import Dict, List, Optional, Iterator, Tuple, Union
 import numpy as np
 import re
-from localization_utils import clean_parameter_name
+from localized_undo.utils.localization_utils import clean_parameter_name
 
 MASK_TYPES = ["global", "random", "delta_mask"]
 
