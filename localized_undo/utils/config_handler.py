@@ -135,10 +135,9 @@ def load_distill_configs(yaml_path, setup_id):
                     config['noise_mask_path'] = str(mask_path)
 
                 # Experiment Identification & Naming
-                mask_part = f"_mask-{mask_name}" if mask_name else ""
-                mask_suffix = f"-mask_{mask_name}" if mask_name else ""
-                exp_id = f"{setup_id}_{config['noise_type']}{mask_part}_a{float(alpha)}_b{float(beta)}_s{seed}"
-                path_suffix = f"-{config['noise_type']}{mask_suffix}-alpha_{alpha}-beta_{beta}-seed_{seed}"
+                mask_config = f"{mask_name}" if mask_name else ""
+                exp_id = f"{setup_id}_{mask_config}_a{float(alpha)}_b{float(beta)}_s{seed}"
+                path_suffix = f"-{mask_config}-alpha_{alpha}-beta_{beta}-seed_{seed}"
 
                 base_name = f"{model_name_prefix}_{method}-arithmetic-partial_distill"
 
