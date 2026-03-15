@@ -14,12 +14,15 @@ custom_login()
 seed = 111
 beta = 0.1
 alphas = [0.1, 0.3, 0.5, 0.7, 0.9]
-noise_type = "delta-mask" # "global"
+model = "gemma-2-0.1B"
+noise_config = "arithmetic_p50_delta_mask_global" # localization mask dir name
 method = "MaxEnt"
+
+# Example: gemma-2-0.1B_MaxEnt-arithmetic-partial_distill-arithmetic_p50_delta_mask_global-alpha_0.1-beta_0.1-seed_111
 
 # Build paths for all distilled variants
 distilled_paths = [
-    f"partial_distill_models_arith/gemma-2-0.1B_{method}-arithmetic-partial_distill-{noise_type}-alpha_{a}-beta_{beta}-seed_{seed}"
+    f"partial_distill_models_arith/{model}_{method}-arithmetic-partial_distill-{noise_config}-alpha_{a}-beta_{beta}-seed_{seed}"
     for a in alphas
 ]
 
