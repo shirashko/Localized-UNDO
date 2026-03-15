@@ -91,6 +91,10 @@ def load_distill_configs(yaml_path, setup_id):
         data = yaml.safe_load(f)
 
     base_template = _initialize_base_config(data, setup_id)
+    model_name_prefix = setup_id.rsplit('_', 1)[0]
+
+    print(f"[*] Config loader: Processing model '{model_name_prefix}' for setup '{setup_id}'")
+
     if 'stopping_criteria' in data:
         base_template.update(data['stopping_criteria'])
 
@@ -121,7 +125,7 @@ def load_distill_configs(yaml_path, setup_id):
                 # Experiment Identification & Naming
                 exp_id = f"{setup_id}_{config['noise_type']}_a{alpha}_b{beta}_s{seed}"
                 path_suffix = f"-{config['noise_type']}-alpha_{alpha}-beta_{beta}-seed_{seed}"
-                base_name = f"gemma-2-0.1B_{method}-arithmetic-partial_distill"
+                base_name = f"{model_name_prefix}_{method}-arithmetic-partial_distill"
 
                 config['output_dir'] = str(MODEL_DIR / "partial_distill_models_arith" / f"{base_name}{path_suffix}")
                 config['path_local_record'] = str(
@@ -133,9 +137,9 @@ def load_distill_configs(yaml_path, setup_id):
                 config['arithmetic_train_file'] = str(DATASET_DIR / "pretrain/train_all_arithmetic.jsonl")
                 config['eng_valid_file'] = str(DATASET_DIR / "pretrain/valid_eng.jsonl")
 
-                mask_file = config.get('noise_mask_file_name')
+                mask_file = config.get('noise_mask_dir_name')
                 if mask_file:
-                    mask_path = PROJECT_ROOT / "localization_masks" / mask_file
+                    mask_path = PROJECT_ROOT / "localization_masks" / mask_file / "mask.pt"
                     if not mask_path.exists():
                         raise FileNotFoundError(f"Localization mask file missing: {mask_path}")
                     config['noise_mask_path'] = str(mask_path)

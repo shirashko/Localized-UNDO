@@ -40,4 +40,4 @@ setups:
     teacher_rel_path: "unlearned_models/MaxEnt/pretrained_models_gemma-2-0.1B_all_arithmetic+eng_final_model_lr_8.0e-05/final_model"
     wandb_project: "gemma-2-0.1B_all_arithmetic+eng_sp_distill"
     noise_type: "delta-mask" # Options: "global", "delta-mask", "snmf", etc.
-    noise_mask_file_name: "delta_mask.pt"
+    noise_mask_dir_name: "arithmetic_p50_delta_mask_global"
