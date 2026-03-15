@@ -1,16 +1,18 @@
 import json
 import math
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 from localized_undo.utils.paths import CONFIG_DIR, PROJECT_ROOT
 from localized_undo.utils.config_handler import load_unlearn_configs
 
 
-def analyze_sweep_from_configs(yaml_path, base_setup_ids, alpha=1.0, beta=1.0, gamma=1.0):
+def analyze_sweep_from_configs(yaml_path, base_setup_ids, forget_weight=1.0, retain_weight=1.0):
     """
-    Analyzes model results using Relative Normalization, saves findings, and plots
-    with non-overlapping x-axis labels.
+    Analyzes unlearning sweeps using two evaluation modes:
+    1. Relative Mode: Performance compared to the pretrained baseline.
+    2. Absolute Mode: Raw performance at the final step (end state only).
     """
     all_exp_configs = load_unlearn_configs(yaml_path, base_setup_ids)
     all_final_metrics = []
@@ -32,82 +34,86 @@ def analyze_sweep_from_configs(yaml_path, base_setup_ids, alpha=1.0, beta=1.0, g
                     final_val = data
 
             if final_val and baseline:
-                # 1. Normalized Language Preservation (Perplexity Ratio)
-                lang_delta = final_val["val/eng_ce_loss"] - baseline["val/eng_ce_loss"]
-                lang_preservation = math.exp(-max(lang_delta, 0))
-
-                # 2. Relative Forget Efficiency (Multiplication & Division)
+                # Identify relevant metric columns
                 forget_cols = [k for k in final_val.keys() if 'multiplication' in k or 'division' in k]
-                base_f_acc = sum(baseline[k] for k in forget_cols) / len(forget_cols) if forget_cols else 1.0
-                curr_f_acc = sum(final_val[k] for k in forget_cols) / len(forget_cols) if forget_cols else 0.0
-                forget_efficiency = 1 - (curr_f_acc / max(base_f_acc, 0.001))
-
-                # 3. Relative Math Retention (Addition & Subtraction)
                 math_retain_cols = [k for k in final_val.keys() if 'addition' in k or 'subtraction' in k]
-                base_m_acc = sum(baseline[k] for k in math_retain_cols) / len(
-                    math_retain_cols) if math_retain_cols else 1.0
-                curr_m_acc = sum(final_val[k] for k in math_retain_cols) / len(
-                    math_retain_cols) if math_retain_cols else 0.0
-                math_retention = curr_m_acc / max(base_m_acc, 0.001)
+
+                # --- CALCULATE RAW ACCURACIES (Absolute Values) ---
+                current_forget_acc = np.mean([final_val[k] for k in forget_cols]) if forget_cols else 0.0
+                current_retain_acc = np.mean([final_val[k] for k in math_retain_cols]) if math_retain_cols else 0.0
+
+                # --- MODE 1: RELATIVE METRICS (Efficiency vs Baseline) ---
+                base_forget_acc = np.mean([baseline[k] for k in forget_cols]) if forget_cols else 1.0
+                base_retain_acc = np.mean([baseline[k] for k in math_retain_cols]) if math_retain_cols else 1.0
+
+                rel_forget_efficiency = 1 - (current_forget_acc / max(base_forget_acc, 0.001))
+                rel_math_retention = current_retain_acc / max(base_retain_acc, 0.001)
+                relative_score = (forget_weight * rel_forget_efficiency) + (retain_weight * rel_math_retention)
+
+                # --- MODE 2: ABSOLUTE METRICS (Final State Only) ---
+                # For forgetting: Score is 1.0 if accuracy is 0.0 (Perfect erasure)
+                abs_forget_score = 1 - current_forget_acc
+                # For retention: Score is 1.0 if accuracy is 1.0 (Perfect preservation)
+                abs_retain_score = current_retain_acc
+                absolute_score = (forget_weight * abs_forget_score) + (retain_weight * abs_retain_score)
 
                 all_final_metrics.append({
                     "setup_id": setup_id,
                     "lr": float(config['learning_rate']),
-                    "lang_preserv_%": lang_preservation * 100,
-                    "forget_eff_%": forget_efficiency * 100,
-                    "math_retent_%": math_retention * 100,
-                    "score": (alpha * lang_preservation) + (beta * forget_efficiency) + (gamma * math_retention),
+                    # Relative Data
+                    "rel_forget_eff_%": rel_forget_efficiency * 100,
+                    "rel_math_retent_%": rel_math_retention * 100,
+                    "relative_composite_score": relative_score,
+                    # Absolute Data
+                    "abs_forget_acc_%": current_forget_acc * 100,
+                    "abs_retain_acc_%": current_retain_acc * 100,
+                    "absolute_composite_score": absolute_score,
                     "output_dir": config['output_dir']
                 })
 
     if not all_final_metrics:
-        print("No valid records found.")
+        print("[!] No valid records found.")
         return None
 
     df = pd.DataFrame(all_final_metrics).sort_values(by="lr")
-    best_model = df.loc[df['score'].idxmax()]
     results_out_dir = PROJECT_ROOT / "plots" / base_setup_ids[0] / "unlearning_sweep_results"
     results_out_dir.mkdir(parents=True, exist_ok=True)
-    results_out_dir.mkdir(parents=True, exist_ok=True)
 
-    # --- PLOTTING LOGIC ---
-    plt.figure(figsize=(12, 7))
-    plt.semilogx(df["lr"], df["lang_preserv_%"], marker='o', label="Language Preservation (General Knowledge)",
-                 color="#2c7fb8", linewidth=2)
-    plt.semilogx(df["lr"], df["forget_eff_%"], marker='s', label="Forget Efficiency (Multiplication & Division)",
-                 color="#e31a1c", linewidth=2)
-    plt.semilogx(df["lr"], df["math_retent_%"], marker='^', label="Math Retention (Addition & Subtraction)",
-                 color="#31a354", linewidth=2)
+    # --- PLOT 1: RELATIVE EFFICIENCY (Baseline Comparison) ---
+    plt.figure(figsize=(10, 6))
+    best_rel_model = df.loc[df['relative_composite_score'].idxmax()]
+    plt.semilogx(df["lr"], df["rel_forget_eff_%"], marker='s', label="Forget Efficiency (vs Baseline)", color="#e31a1c")
+    plt.semilogx(df["lr"], df["rel_math_retent_%"], marker='^', label="Math Retention (vs Baseline)", color="#31a354")
+    plt.axvline(x=best_rel_model['lr'], color='orange', linestyle='--',
+                label=f"Best Rel LR: {best_rel_model['lr']:.1e}")
+    plt.title(f"Option 1: Relative Unlearning Efficiency\n(Compared to Baseline Model)")
+    plt.xlabel("Learning Rate (Log Scale)")
+    plt.ylabel("Relative Change (%)")
+    plt.legend()
+    plt.grid(True, which="both", alpha=0.3)
+    plt.savefig(results_out_dir / f"sweep_relative_{base_setup_ids[0]}.pdf", bbox_inches='tight')
 
-    # Highlight Best
-    plt.axvline(x=best_model['lr'], color='orange', linestyle='--', alpha=0.6,
-                label=f"Best Model (LR={best_model['lr']:.1e})")
+    # --- PLOT 2: ABSOLUTE PERFORMANCE (Final State Only) ---
+    plt.figure(figsize=(10, 6))
+    best_abs_model = df.loc[df['absolute_composite_score'].idxmax()]
+    plt.semilogx(df["lr"], df["abs_forget_acc_%"], marker='o', label="Final Forget Accuracy (Goal: 0%)",
+                 color="#bcbddc")
+    plt.semilogx(df["lr"], df["abs_retain_acc_%"], marker='d', label="Final Retain Accuracy (Goal: 100%)",
+                 color="#756bb1")
+    plt.axvline(x=best_abs_model['lr'], color='purple', linestyle='--',
+                label=f"Best Abs LR: {best_abs_model['lr']:.1e}")
+    plt.title(f"Option 2: Absolute Unlearning Performance\n(Final Model State Only)")
+    plt.xlabel("Learning Rate (Log Scale)")
+    plt.ylabel("Raw Accuracy (%)")
+    plt.legend()
+    plt.grid(True, which="both", alpha=0.3)
+    plt.savefig(results_out_dir / f"sweep_absolute_{base_setup_ids[0]}.pdf", bbox_inches='tight')
 
-    # Clean Title
-    clean_title = base_setup_ids[0].replace("_", " ")
-    plt.title(f"Unlearning Sweep Analysis: {clean_title}\nNormalized Trade-off Metrics", fontsize=14)
-    plt.xlabel("Learning Rate (Log Scale)", fontsize=12)
-    plt.ylabel("Relative Performance (%)", fontsize=12)
+    # Save comprehensive CSV
+    df.to_csv(results_out_dir / f"unlearn_sweep_dual_mode_{base_setup_ids[0]}.csv", index=False)
+    print(f"[+] Analysis complete. Two plots saved to: {results_out_dir}")
 
-    # FIX: Smaller font size and rotation for x-axis ticks to prevent overlap
-    plt.xticks(df["lr"], [f"{lr:.1e}" for lr in df["lr"]], fontsize=9, rotation=30)
-
-    plt.legend(loc='lower left')
-    plt.grid(True, which="both", linestyle="--", alpha=0.3)
-
-    plot_path = results_out_dir / f"sweep_plot_{base_setup_ids[0]}.pdf"
-    plt.savefig(plot_path, format='pdf', bbox_inches='tight')
-    print(f"📈 Plot saved to: {plot_path}")
-
-    # --- SAVING DATA ---
-    csv_path = results_out_dir / f"unlearn_sweep_{base_setup_ids[0]}.csv"
-    df.sort_values(by="score", ascending=False).to_csv(csv_path, index=False)
-
-    best_json_path = results_out_dir / "best_unlearned_checkpoint.json"
-    with open(best_json_path, 'w') as f:
-        json.dump(best_model.to_dict(), f, indent=4)
-
-    return best_model
+    return best_rel_model, best_abs_model
 
 
 if __name__ == "__main__":
