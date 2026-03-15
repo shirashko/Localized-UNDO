@@ -29,7 +29,7 @@ stopping_criteria:
 
 # Experiment sweeps
 sweeps:
-  alphas: [0.1, 0.3, 0.5, 0.7, 0.9] #  [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+  alphas: [0.55,0.65,0.7,0.75] #  [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
   betas: [0.1]
   seeds: [111] # [111, 222, 333, 444, 555]
 
@@ -38,6 +38,6 @@ setups:
     method: "MaxEnt"
     # Pointing to the final_model from the Unlearning stage - use the best model from the run_unlearn_model_selection.py script
     teacher_rel_path: "unlearned_models/MaxEnt/pretrained_models_gemma-2-0.1B_all_arithmetic+eng_final_model_lr_8.0e-05/final_model"
-    wandb_project: "gemma-2-0.1B_all_arithmetic+eng_sp_distill"
-    noise_type: "delta-mask" # Options: "global", "delta-mask", "snmf", etc.
-    noise_mask_dir_name: "arithmetic_p50_delta_mask_global"
+    wandb_project: "arithmetic_distillation"
+    noise_type: "random" # Options: "global", "delta-mask", "snmf", etc.
+    noise_mask_dir_name: "arithmetic_p50_random_global"
