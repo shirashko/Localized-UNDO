@@ -37,4 +37,4 @@ setups:
     first_train_file: "pretrain/train_multiplication_division.jsonl"
     second_train_file: null
     interleave_probs: [1.0]
-    wandb_project: "gemma-2-0.1B_relearn_only_forget"
+    wandb_project: "relearn_attack_only_forget_data"
