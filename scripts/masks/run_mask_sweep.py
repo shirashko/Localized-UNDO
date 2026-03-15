@@ -89,7 +89,9 @@ def run_diagnostic_sweep(folders: list, model_to_test: str, eng_valid: str):
     print("STARTING MECHANISTIC DIAGNOSTIC SWEEP")
     print("=" * 50)
 
-    analyzer = MaskMechanisticDiagnostic(model_to_test, eng_valid)
+    device_for_diag = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"[*] Diagnostics will run on: {device_for_diag}")
+    analyzer = MaskMechanisticDiagnostic(model_to_test, eng_valid, device=device_for_diag)
 
     for folder in sorted(folders):
         try:
@@ -107,7 +109,7 @@ if __name__ == "__main__":
     ENG_VALID = str(DATASET_DIR / "pretrain" / "valid_eng.jsonl")
 
     # 2. Setup Sweep Params
-    PERCENTILE_SWEEP = [0.05, 0.1, 0.2, 0.3, 0.5]
+    PERCENTILE_SWEEP = [0.5] # [0.05, 0.1, 0.2, 0.3, 0.5]
     EXCLUSIONS = ["self_attn", "layernorm", "embed_tokens"]
 
     # 3. Execute
