@@ -165,7 +165,8 @@ def launch_worker(exp_id, all_configs):
         noise_beta=config.get('noise_beta', 0.0),
         noise_type=config.get('noise_type', 'global'),
         shrink_perturb_repeat=config.get('shrink_perturb_repeat', False),
-        noise_mask=noise_mask_tensor
+        noise_mask=noise_mask_tensor,
+        noise_config=config.get('noise_mask_dir_name', None)
     )
 
 

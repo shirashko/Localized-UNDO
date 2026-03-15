@@ -63,6 +63,7 @@ def partial_distill(
     shrink_perturb_repeat=False,
 
     noise_mask=None,
+    noise_config=None,
 ):
     """
     Distillation script using Accelerate. Replaces standard CE with forward KL (KL(teacher||student)).
@@ -89,6 +90,10 @@ def partial_distill(
 
     if use_wandb and accelerator.is_main_process:
         wandb.init(project=wandb_project, name=wandb_run_name, config=distill_args)
+        wandb.config.update({
+            "noise_mask_name": noise_config,
+            "is_localized": noise_mask is not None
+        })
 
     if use_local_record and accelerator.is_main_process:
         custom_makedirs(path_local_record, exist_ok=overwrite_ok)

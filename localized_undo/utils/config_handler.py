@@ -1,5 +1,6 @@
 import yaml
 from localized_undo.utils.paths import MODEL_DIR, DATASET_DIR, CACHE_DIR, PROJECT_ROOT, WMDP_MODEL_DIR
+import os
 
 
 def _initialize_base_config(data, setup_id):
@@ -66,7 +67,11 @@ def load_relearn_configs(yaml_path, setup_ids, models_to_run):
                 config['model_name'] = str(full_model_path)
 
                 # Output Naming Logic
-                safe_model_name = model_rel_path.replace('/', '_')
+                prefix_to_remove = "partial_distill_models_arith"
+                if prefix_to_remove in model_rel_path:
+                    safe_model_name = os.path.basename(model_rel_path)
+                else:
+                    safe_model_name = model_rel_path.replace('/', '_')
                 exp_label = f"relearned_{safe_model_name}_{lr_val:.1e}"
 
                 config['output_dir'] = str(MODEL_DIR / "relearned_models" / setup_id / exp_label)
@@ -122,9 +127,19 @@ def load_distill_configs(yaml_path, setup_id):
                 config['teacher_model_name'] = str(teacher_path)
                 config['student_model_name'] = config['teacher_model_name']
 
+                mask_name = config.get('noise_mask_dir_name')
+                if mask_name:
+                    mask_path = PROJECT_ROOT / "localization_masks" / mask_name / "mask.pt"
+                    if not mask_path.exists():
+                        raise FileNotFoundError(f"Localization mask file missing: {mask_path}")
+                    config['noise_mask_path'] = str(mask_path)
+
                 # Experiment Identification & Naming
-                exp_id = f"{setup_id}_{config['noise_type']}_a{alpha}_b{beta}_s{seed}"
-                path_suffix = f"-{config['noise_type']}-alpha_{alpha}-beta_{beta}-seed_{seed}"
+                mask_part = f"_mask-{mask_name}" if mask_name else ""
+                mask_suffix = f"-mask_{mask_name}" if mask_name else ""
+                exp_id = f"{setup_id}_{config['noise_type']}{mask_part}_a{float(alpha)}_b{float(beta)}_s{seed}"
+                path_suffix = f"-{config['noise_type']}{mask_suffix}-alpha_{alpha}-beta_{beta}-seed_{seed}"
+
                 base_name = f"{model_name_prefix}_{method}-arithmetic-partial_distill"
 
                 config['output_dir'] = str(MODEL_DIR / "partial_distill_models_arith" / f"{base_name}{path_suffix}")
@@ -137,12 +152,6 @@ def load_distill_configs(yaml_path, setup_id):
                 config['arithmetic_train_file'] = str(DATASET_DIR / "pretrain/train_all_arithmetic.jsonl")
                 config['eng_valid_file'] = str(DATASET_DIR / "pretrain/valid_eng.jsonl")
 
-                mask_file = config.get('noise_mask_dir_name')
-                if mask_file:
-                    mask_path = PROJECT_ROOT / "localization_masks" / mask_file / "mask.pt"
-                    if not mask_path.exists():
-                        raise FileNotFoundError(f"Localization mask file missing: {mask_path}")
-                    config['noise_mask_path'] = str(mask_path)
 
                 expanded_experiments[exp_id] = config
 
