@@ -41,9 +41,29 @@ def _initialize_base_config(data, setup_id):
     return config
 
 
-def load_relearn_configs(yaml_path, setup_ids, models_to_run):
+def load_relearn_configs(yaml_path, setup_ids):
     with open(yaml_path, 'r') as f:
         data = yaml.safe_load(f)
+
+    # 1. Extract Experiment Metadata
+    meta = data.get('experiment_metadata', {})
+    model_v = meta.get('model_version', 'unknown')
+    method_from_yaml = meta.get('method', 'unknown')
+    noise_from_yaml = meta.get('noise_config', 'unknown')
+    beta = meta.get('beta', 0.1)
+    seed_val = meta.get('seed', 111)
+    alphas = meta.get('alphas', [])
+    baselines = meta.get('baselines', [])
+    include_baselines = meta.get('include_baselines', False)
+
+    # 2. Build Models to Run list
+    distilled_paths = [
+        f"partial_distill_models_arith/{model_v}_{method_from_yaml}-arithmetic-partial_distill-{noise_from_yaml}-alpha_{a}-beta_{beta}-seed_{seed_val}"
+        for a in alphas
+    ]
+    models_to_run = distilled_paths
+    if include_baselines:
+        models_to_run += baselines
 
     relearn_lrs = data['relearn_lrs']
     expanded_experiments = {}
@@ -58,6 +78,7 @@ def load_relearn_configs(yaml_path, setup_ids, models_to_run):
                 config['learning_rate'] = lr_val
                 config['min_lr'] = float(config.get('min_lr', lr_val))
 
+                # Handle model pathing (check for final_model subfolder)
                 full_model_path = MODEL_DIR / model_rel_path
                 if (full_model_path / "final_model").exists():
                     full_model_path = full_model_path / "final_model"
@@ -66,48 +87,34 @@ def load_relearn_configs(yaml_path, setup_ids, models_to_run):
                     raise FileNotFoundError(f"Base model for relearning not found: {full_model_path}")
 
                 config['model_name'] = str(full_model_path)
-
-                # --- Enhanced Naming & Metadata Extraction ---
-                prefix_distill = "partial_distill_models_arith"
                 safe_model_name = os.path.basename(model_rel_path)
 
-                # Extract Model Version (e.g., gemma-2-0.1B)
-                # Assumes model name is at the start and followed by an underscore or dash
-                model_version_match = re.search(r"^(gemma-2-0.1B|llama-[\w\.-]+)", safe_model_name)
-                model_version = model_version_match.group(1) if model_version_match else "unknown_model"
+                # 3. Enhanced Metadata Extraction for WandB
+                is_distilled = "partial_distill_models_arith" in model_rel_path
 
-                if prefix_distill in model_rel_path:
-                    # 1. Extract Method
-                    method_match = re.search(r"(MaxEnt|GA|KL)", safe_model_name)
-                    method = method_match.group(0) if method_match else "distill"
-
-                    # 2. Extract Alpha & Beta
+                if is_distilled:
+                    # Extraction using Regex from the path
                     alpha_match = re.search(r"alpha_([\d\.]+)", safe_model_name)
-                    beta_match = re.search(r"beta_([\d\.]+)", safe_model_name)
                     alpha = alpha_match.group(1) if alpha_match else "N/A"
-                    beta = beta_match.group(1) if beta_match else "N/A"
 
-                    # 3. Extract Noise Config
-                    noise_match = re.search(r"partial_distill-(.*?)-alpha_", safe_model_name)
-                    noise_config = noise_match.group(1) if noise_match else "unknown_noise"
-
-                    # Construct descriptive run name
-                    distill_info = f"{model_version}_{method}_{noise_config}_a{alpha}_b{beta}"
-                    config['wandb_run_name'] = f"RL_{distill_info}_lr_{lr_val:.1e}"
-
-                    # Store metadata for WandB Table grouping
-                    config['base_model_version'] = model_version
-                    config['parent_method'] = method
-                    config['parent_noise'] = noise_config
+                    # Update config with structured metadata
+                    config['base_model_version'] = model_v
+                    config['parent_method'] = method_from_yaml
+                    config['parent_noise'] = noise_from_yaml
                     config['parent_alpha'] = float(alpha) if alpha != "N/A" else None
-                else:
-                    # Logic for baselines
-                    clean_baseline_name = safe_model_name.replace('pretrained_models_', '').replace('unlearned_models_',
-                                                                                                    '')
-                    config['wandb_run_name'] = f"RL_baseline_{model_version}_{clean_baseline_name}_lr_{lr_val:.1e}"
-                    config['base_model_version'] = model_version
 
-                # --- Path Construction & Setup ---
+                    distill_info = f"{model_v}_{method_from_yaml}_{noise_from_yaml}_a{alpha}_b{beta}"
+                    config['wandb_run_name'] = f"RL_{distill_info}_lr_{lr_val:.1e}"
+                else:
+                    # Logic for Baselines (Pretrained/Unlearned)
+                    type_label = "Unlearn" if "unlearned" in model_rel_path else "Pretrain"
+                    config['base_model_version'] = model_v
+                    config['parent_method'] = f"baseline_{type_label}"
+                    config['parent_noise'] = "none"
+                    config['parent_alpha'] = None
+                    config['wandb_run_name'] = f"Base_{type_label}_lr{lr_val:.1e}"
+
+                # --- Output & Data Paths ---
                 exp_label = f"relearned_{safe_model_name}_{lr_val:.1e}"
                 config['output_dir'] = str(MODEL_DIR / "relearned_models" / setup_id / exp_label)
                 config['path_local_record'] = str(
@@ -121,8 +128,11 @@ def load_relearn_configs(yaml_path, setup_ids, models_to_run):
                 unique_id = f"{setup_id}_{safe_model_name}_lr{lr_val}"
                 expanded_experiments[unique_id] = config
 
+    num_distilled = sum(1 for exp in expanded_experiments.values() if exp['parent_alpha'] is not None)
+    num_baselines = len(expanded_experiments) - num_distilled
+    print(f"📊 Summary: {num_distilled} Distilled runs, {num_baselines} Baseline runs.")
+    print(f"✅ Loaded {len(expanded_experiments)} unique experiments from {yaml_path}")
     return expanded_experiments
-
 
 def load_distill_configs(yaml_path, setup_id):
     with open(yaml_path, 'r') as f:

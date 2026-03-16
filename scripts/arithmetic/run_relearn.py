@@ -7,32 +7,8 @@ from localized_undo.utils.loss_functions import custom_login
 from localized_undo.utils.validation_functions import get_arithmetic_eval_fn
 from localized_undo.utils.parallel_launch import launch_in_parallel_one_per_gpu, get_parallel_launch_wrapper
 
-# Global login
+# Authenticate with WandB and Hugging Face
 custom_login()
-
-# --- Configuration for dynamic paths (Undo Experiment Settings) ---
-seed = 111
-beta = 0.1
-alphas = [0.55,0.65,0.7,0.75]
-model = "gemma-2-0.1B"
-noise_config = "arithmetic_p50_delta_mask_global" # localization mask dir name
-method = "MaxEnt"
-
-# Example: gemma-2-0.1B_MaxEnt-arithmetic-partial_distill-arithmetic_p50_delta_mask_global-alpha_0.1-beta_0.1-seed_111
-
-# Build paths for all distilled variants
-distilled_paths = [
-    f"partial_distill_models_arith/{model}_{method}-arithmetic-partial_distill-{noise_config}-alpha_{a}-beta_{beta}-seed_{seed}"
-    for a in alphas
-]
-
-BASELINES_TO_RUN = [
-                    'pretrained_models/gemma-2-0.1B_addition_subtraction+eng',
-                    'unlearned_models/MaxEnt/pretrained_models_gemma-2-0.1B_all_arithmetic+eng_final_model_lr_8.0e-05',
-                ]
-
-# MODELS_TO_RUN = BASELINES_TO_RUN + distilled_paths
-MODELS_TO_RUN = BASELINES_TO_RUN
 
 
 def launch_relearn_worker(exp_id, all_configs):
@@ -43,10 +19,10 @@ def launch_relearn_worker(exp_id, all_configs):
     config = all_configs[exp_id]
     accelerator = Accelerator()
 
-    # Authenticate with WandB and Hugging Face in child process
+    # Re-login in child process for safety
     custom_login()
 
-    # Initialize the evaluation function
+    # Initialize the arithmetic evaluation function
     eval_fn = get_arithmetic_eval_fn(
         model_name=config['model_name'],
         batch_size=config['batch_size'],
@@ -58,10 +34,12 @@ def launch_relearn_worker(exp_id, all_configs):
         accelerator=accelerator
     )
 
+    # Consolidate training files
     train_files = [config['first_train_file']]
     if config.get('second_train_file'):
         train_files.append(config['second_train_file'])
 
+    # Prepare structured metadata for WandB tracking/grouping
     extra_config = {
         'base_model_version': config.get('base_model_version', 'unknown'),
         'parent_method': config.get('parent_method', 'baseline'),
@@ -70,6 +48,7 @@ def launch_relearn_worker(exp_id, all_configs):
         'learning_rate': config.get('learning_rate', 'unknown'),
     }
 
+    # Execute the relearning process
     relearn(
         model_name=config['model_name'],
         train_files=train_files,
@@ -107,30 +86,23 @@ def launch_relearn_worker(exp_id, all_configs):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--setups", nargs='+', default=["gemma-2-0.1B_train_only_forget"], help="Setup IDs")
+    parser = argparse.ArgumentParser(description="Launch a parallelized relearning sweep.")
+    parser.add_argument("--setups", nargs='+', default=["gemma-2-0.1B_train_only_forget"], help="List of setup IDs from the YAML file to execute.")
     args = parser.parse_args()
 
-    # --- Pre-run Safety Check ---
-    missing_models = []
-    for rel_path in MODELS_TO_RUN:
-        full_path = MODEL_DIR / rel_path
-        # Check for both directory and 'final_model' subfolder if applicable
-        if not full_path.exists() and not (full_path / "final_model").exists():
-            missing_models.append(rel_path)
-
-    if missing_models:
-        print(f"❌ Error: The following models are missing. Please check your unlearn/distill runs:")
-        for m in missing_models:
-            print(f"  - {m}")
-        raise Exception("wrong distilled model path")
-
+    # Dynamic path to the YAML configuration
     yaml_path = CONFIG_DIR / "arithmetic" / "relearn.yaml"
-    all_experiments = load_relearn_configs(yaml_path, args.setups, MODELS_TO_RUN)
+
+    # Load and expand experiments. The model paths are now handled internally based on YAML metadata.
+    all_experiments = load_relearn_configs(yaml_path, args.setups)
+
+    if not all_experiments:
+        print("❌ No valid experiments were loaded. Please check your YAML configuration and model paths.")
+        exit(1)
 
     print(f"🚀 Launching Relearning sweep for {len(all_experiments)} combinations...")
-    print(f"[*] Models involved: {len(MODELS_TO_RUN)}")
 
+    # Create task list for parallel execution (one experiment per GPU)
     task_list = [(eid, all_experiments) for eid in all_experiments.keys()]
     parallel_launcher = get_parallel_launch_wrapper(launch_relearn_worker)
     launch_in_parallel_one_per_gpu(experiment_list=task_list, experiment_fn=parallel_launcher)
