@@ -116,6 +116,6 @@ def analyze_sweep_from_configs(yaml_path, base_setup_ids, forget_weight=1.0, ret
 
 
 if __name__ == "__main__":
-    BASE_SETUPS = ["gemma-2-0.1B_MaxEnt"]
+    BASE_SETUPS = ["gemma-2-0.3B_MaxEnt"]
     YAML_PATH = CONFIG_DIR / "arithmetic" / "unlearn.yaml"
     analyze_sweep_from_configs(YAML_PATH, BASE_SETUPS)
