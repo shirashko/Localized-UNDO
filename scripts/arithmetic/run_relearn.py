@@ -1,4 +1,6 @@
 import argparse
+from pathlib import Path
+
 from accelerate import Accelerator
 from localized_undo.tools.relearn_langarith import relearn
 from localized_undo.utils.paths import CONFIG_DIR, MODEL_DIR
@@ -87,22 +89,36 @@ def launch_relearn_worker(exp_id, all_configs):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Launch a parallelized relearning sweep.")
-    parser.add_argument("--setups", nargs='+', default=["gemma-2-0.1B_train_only_forget"], help="List of setup IDs from the YAML file to execute.")
+    parser.add_argument("--setups", nargs='+', default=["gemma-2-0.1B_train_only_forget"], help="List of setup IDs from the YAML file.")
     args = parser.parse_args()
 
-    # Dynamic path to the YAML configuration
+    # 1. Load configuration and expand experiments
     yaml_path = CONFIG_DIR / "arithmetic" / "relearn.yaml"
-
-    # Load and expand experiments. The model paths are now handled internally based on YAML metadata.
     all_experiments = load_relearn_configs(yaml_path, args.setups)
 
     if not all_experiments:
-        print("❌ No valid experiments were loaded. Please check your YAML configuration and model paths.")
+        print("❌ No valid experiments were loaded. Check your YAML and setups.")
         exit(1)
 
-    print(f"🚀 Launching Relearning sweep for {len(all_experiments)} combinations...")
+    # 2. Safety Check: Verify that all referenced base models exist on disk
+    missing_models = []
+    # We use a set to avoid checking the same model path multiple times
+    unique_model_paths = set(exp['model_name'] for exp in all_experiments.values())
 
-    # Create task list for parallel execution (one experiment per GPU)
+    for model_path in unique_model_paths:
+        p = Path(model_path)
+        # Check if the path exists (load_relearn_configs already resolves final_model internally)
+        if not p.exists():
+            missing_models.append(model_path)
+
+    if missing_models:
+        print(f"❌ Error: The following base models are missing. Please check your unlearn/distill runs:")
+        for m in missing_models:
+            print(f"  - {m}")
+        raise FileNotFoundError("One or more base models for relearning are missing.")
+
+    # 3. Execution
+    print(f"🚀 Launching Relearning sweep for {len(all_experiments)} combinations...")
     task_list = [(eid, all_experiments) for eid in all_experiments.keys()]
     parallel_launcher = get_parallel_launch_wrapper(launch_relearn_worker)
     launch_in_parallel_one_per_gpu(experiment_list=task_list, experiment_fn=parallel_launcher)
