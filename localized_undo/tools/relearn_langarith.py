@@ -53,7 +53,8 @@ def relearn(
     path_local_record="local_record/relearn_log.jsonl",
     stopping_strategy='first_exhausted',
     overwrite_ok=False,
-    save_models=True
+    save_models=True,
+    extra_config=None
 ):
     """
     Executes a controlled training loop to "re-acquire" knowledge in a model.
@@ -98,6 +99,7 @@ def relearn(
         stopping_strategy (str): Data interleaving strategy ('first_exhausted' or 'all_exhausted').
         overwrite_ok (bool): If True, allows writing to an existing output_dir.
         save_models (bool): If True, saves the final model and checkpoints.
+        extra_config (dict): Extra configuration for relearn.py.
 
     Note:
         The function performs an initial validation step at step 0 to establish a baseline
@@ -123,6 +125,17 @@ def relearn(
             name=wandb_run_name,
             config=args_dict,
         )
+
+        if extra_config:
+            keys_to_log = [
+                'base_model_version',
+                'parent_method',
+                'parent_noise',
+                'parent_alpha',
+                'learning_rate'
+            ]
+            metadata_to_update = {k: extra_config[k] for k in keys_to_log if k in extra_config}
+            wandb.config.update(metadata_to_update, allow_val_change=True)
 
     # Local record setup
     if use_local_record and accelerator.is_main_process:

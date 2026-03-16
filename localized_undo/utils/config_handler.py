@@ -1,6 +1,7 @@
 import yaml
 from localized_undo.utils.paths import MODEL_DIR, DATASET_DIR, CACHE_DIR, PROJECT_ROOT, WMDP_MODEL_DIR
 import os
+import re
 
 
 def _initialize_base_config(data, setup_id):
@@ -66,20 +67,52 @@ def load_relearn_configs(yaml_path, setup_ids, models_to_run):
 
                 config['model_name'] = str(full_model_path)
 
-                # Output Naming Logic
-                prefix_to_remove = "partial_distill_models_arith"
-                if prefix_to_remove in model_rel_path:
-                    safe_model_name = os.path.basename(model_rel_path)
-                else:
-                    safe_model_name = model_rel_path.replace('/', '_')
-                exp_label = f"relearned_{safe_model_name}_{lr_val:.1e}"
+                # --- Enhanced Naming & Metadata Extraction ---
+                prefix_distill = "partial_distill_models_arith"
+                safe_model_name = os.path.basename(model_rel_path)
 
+                # Extract Model Version (e.g., gemma-2-0.1B)
+                # Assumes model name is at the start and followed by an underscore or dash
+                model_version_match = re.search(r"^(gemma-2-0.1B|llama-[\w\.-]+)", safe_model_name)
+                model_version = model_version_match.group(1) if model_version_match else "unknown_model"
+
+                if prefix_distill in model_rel_path:
+                    # 1. Extract Method
+                    method_match = re.search(r"(MaxEnt|GA|KL)", safe_model_name)
+                    method = method_match.group(0) if method_match else "distill"
+
+                    # 2. Extract Alpha & Beta
+                    alpha_match = re.search(r"alpha_([\d\.]+)", safe_model_name)
+                    beta_match = re.search(r"beta_([\d\.]+)", safe_model_name)
+                    alpha = alpha_match.group(1) if alpha_match else "N/A"
+                    beta = beta_match.group(1) if beta_match else "N/A"
+
+                    # 3. Extract Noise Config
+                    noise_match = re.search(r"partial_distill-(.*?)-alpha_", safe_model_name)
+                    noise_config = noise_match.group(1) if noise_match else "unknown_noise"
+
+                    # Construct descriptive run name
+                    distill_info = f"{model_version}_{method}_{noise_config}_a{alpha}_b{beta}"
+                    config['wandb_run_name'] = f"RL_{distill_info}_lr_{lr_val:.1e}"
+
+                    # Store metadata for WandB Table grouping
+                    config['base_model_version'] = model_version
+                    config['parent_method'] = method
+                    config['parent_noise'] = noise_config
+                    config['parent_alpha'] = float(alpha) if alpha != "N/A" else None
+                else:
+                    # Logic for baselines
+                    clean_baseline_name = safe_model_name.replace('pretrained_models_', '').replace('unlearned_models_',
+                                                                                                    '')
+                    config['wandb_run_name'] = f"RL_baseline_{model_version}_{clean_baseline_name}_lr_{lr_val:.1e}"
+                    config['base_model_version'] = model_version
+
+                # --- Path Construction & Setup ---
+                exp_label = f"relearned_{safe_model_name}_{lr_val:.1e}"
                 config['output_dir'] = str(MODEL_DIR / "relearned_models" / setup_id / exp_label)
                 config['path_local_record'] = str(
                     MODEL_DIR / "local_records/relearned_models" / setup_id / f"{exp_label}.txt")
-                config['wandb_run_name'] = f"{safe_model_name}_lr_{lr_val:.1e}"
 
-                # Data Paths
                 config['eng_valid_file'] = str(DATASET_DIR / "pretrain/valid_eng.jsonl")
                 config['first_train_file'] = str(DATASET_DIR / config['first_train_file'])
                 if config.get('second_train_file'):

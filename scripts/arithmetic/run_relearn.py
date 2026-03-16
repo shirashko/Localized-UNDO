@@ -13,7 +13,7 @@ custom_login()
 # --- Configuration for dynamic paths (Undo Experiment Settings) ---
 seed = 111
 beta = 0.1
-alphas = [0.1, 0.3, 0.5, 0.7, 0.9]
+alphas = [0.55,0.65,0.7,0.75]
 model = "gemma-2-0.1B"
 noise_config = "arithmetic_p50_delta_mask_global" # localization mask dir name
 method = "MaxEnt"
@@ -62,6 +62,14 @@ def launch_relearn_worker(exp_id, all_configs):
     if config.get('second_train_file'):
         train_files.append(config['second_train_file'])
 
+    extra_config = {
+        'base_model_version': config.get('base_model_version', 'unknown'),
+        'parent_method': config.get('parent_method', 'baseline'),
+        'parent_noise': config.get('parent_noise', 'none'),
+        'parent_alpha': config.get('parent_alpha', 'none'),
+        'learning_rate': config.get('learning_rate', 'unknown'),
+    }
+
     relearn(
         model_name=config['model_name'],
         train_files=train_files,
@@ -93,7 +101,8 @@ def launch_relearn_worker(exp_id, all_configs):
         path_local_record=config['path_local_record'],
         overwrite_ok=config.get('overwrite_ok', False),
         save_models=config.get('save_models', True),
-        save_checkpoint_steps=config.get('save_checkpoint_steps', 1500)
+        save_checkpoint_steps=config.get('save_checkpoint_steps', 1500),
+        extra_config=extra_config,
     )
 
 
