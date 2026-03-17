@@ -16,7 +16,6 @@ baselines_library:
     - "pretrained_models/gemma-2-0.1B_addition_subtraction+eng"
     - "unlearned_models/MaxEnt/pretrained_models_gemma-2-0.1B_all_arithmetic+eng_final_model_lr_8.0e-05"
 
-# --- Training Defaults ---
 default_config:
   seed: 42
   batch_size: 3
