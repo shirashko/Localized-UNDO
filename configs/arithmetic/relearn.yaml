@@ -5,16 +5,16 @@ experiment_metadata:
   beta: 0.1
   seed: 111
   alphas: [0.55, 0.65, 0.7, 0.75]
+  relearn_lrs: [ 1e-3, 7e-4, 4e-4, 1e-4, 7e-5, 5e-5, 1e-5, 7e-6, 4e-6, 1e-6 ]
   include_baselines: true
 
-  # List of baseline relative paths
-  baselines:
+baselines_library:
+  gemma-2-0.3B:
     - "pretrained_models/gemma-2-0.3B_addition_subtraction+eng"
     - "unlearned_models/MaxEnt/pretrained_models_gemma-2-0.3B_all_arithmetic+eng_final_model_lr_1.0e-04"
-
-#  baselines:
-#    - "pretrained_models/gemma-2-0.1B_addition_subtraction+eng"
-#    - "unlearned_models/MaxEnt/pretrained_models_gemma-2-0.1B_all_arithmetic+eng_final_model_lr_8.0e-05"
+  gemma-2-0.1B:
+    - "pretrained_models/gemma-2-0.1B_addition_subtraction+eng"
+    - "unlearned_models/MaxEnt/pretrained_models_gemma-2-0.1B_all_arithmetic+eng_final_model_lr_8.0e-05"
 
 # --- Training Defaults ---
 default_config:
@@ -35,9 +35,6 @@ default_config:
   use_local_record: true
   save_models: false
   device: "cuda"
-
-# The specific relearning rates to sweep
-relearn_lrs: [1e-3, 7e-4, 4e-4, 1e-4, 7e-5, 5e-5, 1e-5, 7e-6, 4e-6, 1e-6]
 
 setups:
   gemma-2-0.1B_all_data:

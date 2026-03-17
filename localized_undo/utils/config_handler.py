@@ -2,6 +2,7 @@ import yaml
 from localized_undo.utils.paths import MODEL_DIR, DATASET_DIR, CACHE_DIR, PROJECT_ROOT, WMDP_MODEL_DIR
 import os
 import re
+import json
 
 
 def _initialize_base_config(data, setup_id):
@@ -41,97 +42,158 @@ def _initialize_base_config(data, setup_id):
     return config
 
 
+def _validate_model_path(model_rel_path, model_v):
+    """
+    Resolve and validate the model path and its architecture.
+    Raises FileNotFoundError or RuntimeError if validation fails.
+    """
+    full_path = MODEL_DIR / model_rel_path
+
+    # 1. Resolve 'final_model' subfolder if exists
+    if (full_path / "final_model").exists():
+        full_path = full_path / "final_model"
+
+    # 2. Check existence
+    if not full_path.exists():
+        raise FileNotFoundError(f"Critical Error: Base model path does not exist: {full_path}")
+
+    # 3. Validate hidden size (Gemma-2 architecture check)
+    config_json_path = full_path / "config.json"
+    if not config_json_path.exists():
+        raise FileNotFoundError(f"Critical Error: Missing 'config.json' in {full_path}. Cannot verify architecture.")
+
+    with open(config_json_path, 'r') as cj:
+        model_file_config = json.load(cj)
+        actual_hidden = model_file_config.get("hidden_size")
+
+        # Expected mapping for Gemma-2
+        expected_hidden = 768 if "0.3B" in model_v else 320
+
+        if actual_hidden and actual_hidden != expected_hidden:
+            raise RuntimeError(
+                f"Architecture Mismatch! Model at {model_rel_path} has hidden_size={actual_hidden}, "
+                f"but metadata expects {model_v} (hidden_size={expected_hidden})."
+            )
+
+    return full_path
+
+
+def _extract_distill_metadata(model_dir_name, model_v, method, noise, beta):
+    """Extracts alpha and builds naming for distilled models."""
+    alpha_match = re.search(r"alpha_([\d\.]+)", model_dir_name)
+    if not alpha_match:
+        raise ValueError(f"Could not parse alpha from distilled model path: {model_dir_name}")
+
+    alpha = float(alpha_match.group(1))
+    distill_info = f"{model_v}_{method}_{noise}_a{alpha}_b{beta}"
+
+    return {
+        'parent_method': method,
+        'parent_noise': noise,
+        'parent_alpha': alpha,
+        'wandb_run_name': f"RL_{distill_info}"
+    }
+
+
+def _extract_baseline_metadata(model_rel_path, model_v):
+    """Identifies the type of baseline (Oracle/Unlearn) and builds naming."""
+    if "unlearned" in model_rel_path:
+        type_label = "Unlearn"
+    elif "addition_subtraction+eng" in model_rel_path:
+        type_label = "Oracle"
+    else:
+        raise ValueError(f"Unrecognized baseline type in path: {model_rel_path}")
+
+    return {
+        'parent_method': f"baseline_{type_label}",
+        'parent_noise': "none",
+        'parent_alpha': None,
+        'wandb_run_name': f"Base_{model_v}_{type_label}"
+    }
+
+
+def _build_relearn_paths(config, setup_id, model_dir_name, lr_val):
+    """Constructs output and local record paths."""
+    exp_label = f"relearned_{model_dir_name}_{lr_val:.1e}"
+    config['output_dir'] = str(MODEL_DIR / "relearned_models" / setup_id / exp_label)
+    config['path_local_record'] = str(
+        MODEL_DIR / "local_records/relearned_models" / setup_id / f"{exp_label}.txt"
+    )
+    return config
+
+
 def load_relearn_configs(yaml_path, setup_ids):
     with open(yaml_path, 'r') as f:
         data = yaml.safe_load(f)
 
-    # 1. Extract Experiment Metadata
+    # Initialization & Metadata Extraction
     meta = data.get('experiment_metadata', {})
     model_v = meta.get('model_version', 'unknown')
-    method_from_yaml = meta.get('method', 'unknown')
-    noise_from_yaml = meta.get('noise_config', 'unknown')
-    beta = meta.get('beta', 0.1)
-    seed_val = meta.get('seed', 111)
-    alphas = meta.get('alphas', [])
-    baselines = meta.get('baselines', [])
-    include_baselines = meta.get('include_baselines', False)
+    relearn_lrs = meta.get('relearn_lrs', [])
 
-    # 2. Build Models to Run list
-    distilled_paths = [
-        f"partial_distill_models_arith/{model_v}_{method_from_yaml}-arithmetic-partial_distill-{noise_from_yaml}-alpha_{a}-beta_{beta}-seed_{seed_val}"
-        for a in alphas
+    if not relearn_lrs:
+        raise ValueError(f"No relearning rates found in {yaml_path}")
+
+    # Build Models to Run (Distilled + Baselines)
+    models_to_run = [
+        f"partial_distill_models_arith/{model_v}_{meta['method']}-arithmetic-partial_distill-"
+        f"{meta['noise_config']}-alpha_{a}-beta_{meta['beta']}-seed_{meta['seed']}"
+        for a in meta.get('alphas', [])
     ]
-    models_to_run = distilled_paths
-    if include_baselines:
+
+    if meta.get('include_baselines'):
+        baselines = data.get('baselines_library', {}).get(model_v, [])
+        if not baselines:
+            raise ValueError(f"include_baselines is True but baselines_library is empty for {model_v}")
         models_to_run += baselines
 
-    relearn_lrs = data['relearn_lrs']
     expanded_experiments = {}
 
     for setup_id in setup_ids:
         base_template = _initialize_base_config(data, setup_id)
 
         for model_rel_path in models_to_run:
+            full_model_path = _validate_model_path(model_rel_path, model_v)
+            model_dir_name = os.path.basename(model_rel_path)
+            is_distilled = "partial_distill_models_arith" in model_rel_path
+
             for lr in relearn_lrs:
-                config = base_template.copy()
                 lr_val = float(lr)
-                config['learning_rate'] = lr_val
-                config['min_lr'] = float(config.get('min_lr', lr_val))
+                config = base_template.copy()
+                config.update({
+                    'learning_rate': lr_val,
+                    'min_lr': lr_val,
+                    'model_name': str(full_model_path),
+                    'base_model_version': model_v
+                })
 
-                # Handle model pathing (check for final_model subfolder)
-                full_model_path = MODEL_DIR / model_rel_path
-                if (full_model_path / "final_model").exists():
-                    full_model_path = full_model_path / "final_model"
-
-                if not full_model_path.exists():
-                    raise FileNotFoundError(f"Base model for relearning not found: {full_model_path}")
-
-                config['model_name'] = str(full_model_path)
-                safe_model_name = os.path.basename(model_rel_path)
-
-                # 3. Enhanced Metadata Extraction for WandB
-                is_distilled = "partial_distill_models_arith" in model_rel_path
-
+                # Metadata & Naming Logic
                 if is_distilled:
-                    # Extraction using Regex from the path
-                    alpha_match = re.search(r"alpha_([\d\.]+)", safe_model_name)
-                    alpha = alpha_match.group(1) if alpha_match else "N/A"
-
-                    # Update config with structured metadata
-                    config['base_model_version'] = model_v
-                    config['parent_method'] = method_from_yaml
-                    config['parent_noise'] = noise_from_yaml
-                    config['parent_alpha'] = float(alpha) if alpha != "N/A" else None
-
-                    distill_info = f"{model_v}_{method_from_yaml}_{noise_from_yaml}_a{alpha}_b{beta}"
-                    config['wandb_run_name'] = f"RL_{distill_info}_lr_{lr_val:.1e}"
+                    meta_info = _extract_distill_metadata(
+                        model_dir_name, model_v, meta['method'], meta['noise_config'], meta['beta']
+                    )
                 else:
-                    # Logic for Baselines (Pretrained/Unlearned)
-                    type_label = "Unlearn" if "unlearned" in model_rel_path else "Pretrain"
-                    config['base_model_version'] = model_v
-                    config['parent_method'] = f"baseline_{type_label}"
-                    config['parent_noise'] = "none"
-                    config['parent_alpha'] = None
-                    config['wandb_run_name'] = f"Base_{type_label}_lr{lr_val:.1e}"
+                    meta_info = _extract_baseline_metadata(model_rel_path, model_v)
 
-                # --- Output & Data Paths ---
-                exp_label = f"relearned_{safe_model_name}_{lr_val:.1e}"
-                config['output_dir'] = str(MODEL_DIR / "relearned_models" / setup_id / exp_label)
-                config['path_local_record'] = str(
-                    MODEL_DIR / "local_records/relearned_models" / setup_id / f"{exp_label}.txt")
+                # Append LR to wandb name and update config
+                meta_info['wandb_run_name'] += f"_lr{lr_val:.1e}"
+                config.update(meta_info)
 
-                config['eng_valid_file'] = str(DATASET_DIR / "pretrain/valid_eng.jsonl")
+                # Output Path Construction
+                config = _build_relearn_paths(config, setup_id, model_dir_name, lr_val)
+
+                # Data Validation & Assignment
+                eng_valid = DATASET_DIR / "pretrain/valid_eng.jsonl"
+                if not eng_valid.exists():
+                    raise FileNotFoundError(f"Missing validation file: {eng_valid}")
+
+                config['eng_valid_file'] = str(eng_valid)
                 config['first_train_file'] = str(DATASET_DIR / config['first_train_file'])
-                if config.get('second_train_file'):
-                    config['second_train_file'] = str(DATASET_DIR / config['second_train_file'])
 
-                unique_id = f"{setup_id}_{safe_model_name}_lr{lr_val}"
+                unique_id = f"{setup_id}_{model_dir_name}_lr{lr_val}"
                 expanded_experiments[unique_id] = config
 
-    num_distilled = sum(1 for exp in expanded_experiments.values() if exp['parent_alpha'] is not None)
-    num_baselines = len(expanded_experiments) - num_distilled
-    print(f"📊 Summary: {num_distilled} Distilled runs, {num_baselines} Baseline runs.")
-    print(f"✅ Loaded {len(expanded_experiments)} unique experiments from {yaml_path}")
+    print(f"✅ Successfully loaded {len(expanded_experiments)} unique experiments.")
     return expanded_experiments
 
 def load_distill_configs(yaml_path, setup_id):
