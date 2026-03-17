@@ -1,16 +1,20 @@
 experiment_metadata:
-  model_version: "gemma-2-0.1B"
+  model_version: "gemma-2-0.3B"
   method: "MaxEnt"
-  noise_config: "arithmetic_p50_random_global"
+  noise_config: "global"
   beta: 0.1
   seed: 111
   alphas: [0.55, 0.65, 0.7, 0.75]
-  include_baselines: false
+  include_baselines: true
 
   # List of baseline relative paths
   baselines:
-    - "pretrained_models/gemma-2-0.1B_addition_subtraction+eng"
-    - "unlearned_models/MaxEnt/pretrained_models_gemma-2-0.1B_all_arithmetic+eng_final_model_lr_8.0e-05"
+    - "pretrained_models/gemma-2-0.3B_addition_subtraction+eng"
+    - "unlearned_models/MaxEnt/pretrained_models_gemma-2-0.3B_all_arithmetic+eng_final_model_lr_1.0e-04"
+
+#  baselines:
+#    - "pretrained_models/gemma-2-0.1B_addition_subtraction+eng"
+#    - "unlearned_models/MaxEnt/pretrained_models_gemma-2-0.1B_all_arithmetic+eng_final_model_lr_8.0e-05"
 
 # --- Training Defaults ---
 default_config:
@@ -53,3 +57,9 @@ setups:
     second_train_file: null
     interleave_probs: [1.0]
     wandb_project: "relearn_attack_only_forget_data"
+
+  gemma-2-0.3B_train_only_forget:
+    first_train_file: "pretrain/train_multiplication_division.jsonl"
+    second_train_file: null
+    interleave_probs: [1.0]
+    wandb_project: "gemma-2-0.3B_relearn_attack_only_forget_data"
