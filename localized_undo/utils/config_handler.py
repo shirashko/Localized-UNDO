@@ -5,23 +5,19 @@ import re
 import json
 
 
-def _initialize_base_config(data, setup_id):
-    """
-    Unified inheritance logic: Starts with default_config and
-    overwrites with setup-specific values if they exist.
-    """
+def _initialize_base_config_by_setup(data, setup_id):
     if 'setups' not in data or setup_id not in data['setups']:
         raise KeyError(f"Setup ID '{setup_id}' not found in the YAML configuration.")
 
-    # Start with a deep copy of the defaults
-    config = data['default_config'].copy()
+    setup_overrides = data['setups'].get(setup_id) or {}
 
-    # Retrieve overrides. Handle the case where the setup is empty/None in YAML
-    setup_overrides = data['setups'].get(setup_id)
-    if setup_overrides:
-        config.update(setup_overrides)
+    return _initialize_base_config(data['default_config'], setup_overrides)
 
-    # Standardize cache directories to the system paths
+
+def _initialize_base_config(base_config, overrides):
+    config = base_config.copy()
+    config.update(overrides)
+
     config['cache_dir'] = str(CACHE_DIR)
     config['dataset_cache_dir'] = str(CACHE_DIR)
 
@@ -30,13 +26,14 @@ def _initialize_base_config(data, setup_id):
         'weight_decay', 'gradient_clipping_threshold',
         'both_losses_act_loss_multiplier', 'use_base_teacher_percent'
     ]
+    int_keys = ['batch_size', 'gradient_accumulation_steps', 'max_steps', 'seed', 'max_length', 'epochs']
+
     for key in float_keys:
-        if key in config and config[key] is not None:
+        if config.get(key) is not None:
             config[key] = float(config[key])
 
-    int_keys = ['batch_size', 'gradient_accumulation_steps', 'max_steps', 'seed', 'max_length', 'epochs']
     for key in int_keys:
-        if key in config and config[key] is not None:
+        if config.get(key) is not None:
             config[key] = int(config[key])
 
     return config
@@ -122,17 +119,17 @@ def _build_relearn_paths(config, setup_id, model_dir_name, lr_val):
     return config
 
 
-def load_relearn_configs(yaml_path, setup_ids):
+def load_relearn_configs(yaml_path):
     with open(yaml_path, 'r') as f:
         data = yaml.safe_load(f)
 
-    # Initialization & Metadata Extraction
     meta = data.get('experiment_metadata', {})
+    base_template = _initialize_base_config(data['default_config'], meta)
     model_v = meta.get('model_version', 'unknown')
     relearn_lrs = meta.get('relearn_lrs', [])
 
-    if not relearn_lrs:
-        raise ValueError(f"No relearning rates found in {yaml_path}")
+
+    base_template['wandb_project'] = f"{model_v}_{base_template['wandb_project']}"
 
     # Build Models to Run (Distilled + Baselines)
     models_to_run = [
@@ -143,55 +140,43 @@ def load_relearn_configs(yaml_path, setup_ids):
 
     if meta.get('include_baselines'):
         baselines = data.get('baselines_library', {}).get(model_v, [])
-        if not baselines:
-            raise ValueError(f"include_baselines is True but baselines_library is empty for {model_v}")
         models_to_run += baselines
 
     expanded_experiments = {}
 
-    for setup_id in setup_ids:
-        base_template = _initialize_base_config(data, setup_id)
+    for model_rel_path in models_to_run:
+        full_model_path = _validate_model_path(model_rel_path, model_v)
+        model_dir_name = os.path.basename(model_rel_path)
+        is_distilled = "partial_distill_models_arith" in model_rel_path
 
-        for model_rel_path in models_to_run:
-            full_model_path = _validate_model_path(model_rel_path, model_v)
-            model_dir_name = os.path.basename(model_rel_path)
-            is_distilled = "partial_distill_models_arith" in model_rel_path
+        for lr in relearn_lrs:
+            lr_val = float(lr)
+            config = base_template.copy()
+            config.update({
+                'learning_rate': lr_val,
+                'min_lr': lr_val,
+                'model_name': str(full_model_path),
+                'base_model_version': model_v,
+                'eng_valid_file': str(DATASET_DIR / "pretrain/valid_eng.jsonl"),
+                'first_train_file': str(DATASET_DIR / config['first_train_file'])
+            })
 
-            for lr in relearn_lrs:
-                lr_val = float(lr)
-                config = base_template.copy()
-                config.update({
-                    'learning_rate': lr_val,
-                    'min_lr': lr_val,
-                    'model_name': str(full_model_path),
-                    'base_model_version': model_v
-                })
+            if is_distilled:
+                meta_info = _extract_distill_metadata(
+                    model_dir_name, model_v, meta['method'], meta['noise_config'], meta['beta']
+                )
+            else:
+                meta_info = _extract_baseline_metadata(model_rel_path, model_v)
 
-                # Metadata & Naming Logic
-                if is_distilled:
-                    meta_info = _extract_distill_metadata(
-                        model_dir_name, model_v, meta['method'], meta['noise_config'], meta['beta']
-                    )
-                else:
-                    meta_info = _extract_baseline_metadata(model_rel_path, model_v)
+            meta_info['wandb_run_name'] += f"_lr{lr_val:.1e}"
+            config.update(meta_info)
 
-                # Append LR to wandb name and update config
-                meta_info['wandb_run_name'] += f"_lr{lr_val:.1e}"
-                config.update(meta_info)
+            # Build paths
+            setup_id = f"{model_v}_train_only_forget"
+            config = _build_relearn_paths(config, setup_id, model_dir_name, lr_val)
 
-                # Output Path Construction
-                config = _build_relearn_paths(config, setup_id, model_dir_name, lr_val)
-
-                # Data Validation & Assignment
-                eng_valid = DATASET_DIR / "pretrain/valid_eng.jsonl"
-                if not eng_valid.exists():
-                    raise FileNotFoundError(f"Missing validation file: {eng_valid}")
-
-                config['eng_valid_file'] = str(eng_valid)
-                config['first_train_file'] = str(DATASET_DIR / config['first_train_file'])
-
-                unique_id = f"{setup_id}_{model_dir_name}_lr{lr_val}"
-                expanded_experiments[unique_id] = config
+            unique_id = f"{setup_id}_{model_dir_name}_lr{lr_val}"
+            expanded_experiments[unique_id] = config
 
     print(f"✅ Successfully loaded {len(expanded_experiments)} unique experiments.")
     return expanded_experiments
@@ -200,7 +185,7 @@ def load_distill_configs(yaml_path, setup_id):
     with open(yaml_path, 'r') as f:
         data = yaml.safe_load(f)
 
-    base_template = _initialize_base_config(data, setup_id)
+    base_template = _initialize_base_config_by_setup(data, setup_id)
     model_name_prefix = setup_id.rsplit('_', 1)[0]
 
     print(f"[*] Config loader: Processing model '{model_name_prefix}' for setup '{setup_id}'")
@@ -268,7 +253,7 @@ def load_unlearn_configs(yaml_path, base_setup_ids):
 
     expanded_setups = {}
     for base_id in base_setup_ids:
-        config_template = _initialize_base_config(data, base_id)
+        config_template = _initialize_base_config_by_setup(data, base_id)
         method = config_template['method']
         lr_range = data['lr_ranges'][method]
 
@@ -302,7 +287,7 @@ def load_pretrain_config(yaml_path, setup_id):
     with open(yaml_path, 'r') as f:
         data = yaml.safe_load(f)
 
-    config = _initialize_base_config(data, setup_id)
+    config = _initialize_base_config_by_setup(data, setup_id)
 
     m_id = config['model_id']
     a_type = config['arithmetic_type']
@@ -332,7 +317,7 @@ def load_wmdp_unlearn_configs(yaml_path, setup_ids):
 
     for base_id in setup_ids:
         # Merges default_config with specific setup config
-        config_template = _initialize_base_config(data, base_id)
+        config_template = _initialize_base_config_by_setup(data, base_id)
 
         method = config_template['method']
         # Detect domain (cyber/bio) from the setup ID string
@@ -393,7 +378,7 @@ def load_wmdp_distill_configs(yaml_path, setup_ids, model_map):
     expanded_experiments = {}
 
     for setup_id in setup_ids:
-        config_template = _initialize_base_config(data, setup_id)
+        config_template = _initialize_base_config_by_setup(data, setup_id)
 
         for model_name, model_path_template in model_map.items():
             for dataset_name, d_val in dataset_info.items():
@@ -447,7 +432,7 @@ def load_wmdp_relearn_configs(yaml_path, setup_ids, model_map, eval_on_loss=Fals
     expanded_experiments = {}
 
     for setup_id in setup_ids:
-        config_template = _initialize_base_config(data, setup_id)
+        config_template = _initialize_base_config_by_setup(data, setup_id)
 
         for model_name, model_path_template in model_map.items():
             for data_name, d_val in dataset_info.items():
