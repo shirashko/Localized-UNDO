@@ -1,3 +1,22 @@
+default_config:
+  seed: 42
+  batch_size: 3
+  gradient_accumulation_steps: 5
+  epochs: 1
+  max_steps: 500
+  num_warmup_steps: 1
+  validation_steps: 5
+  save_checkpoint_steps: 999
+  scheduler_type: "cosine"
+  weight_decay: 0.0
+  gradient_clipping_threshold: 1.0
+  max_length: 256
+  join_or_subsequence: true
+  use_wandb: true
+  use_local_record: true
+  save_models: false
+  device: "cuda"
+
 experiment_metadata:
   model_version: "gemma-2-0.3B"
   method: "MaxEnt"
@@ -19,22 +38,3 @@ baselines_library:
   gemma-2-0.1B:
     - "pretrained_models/gemma-2-0.1B_addition_subtraction+eng"
     - "unlearned_models/MaxEnt/pretrained_models_gemma-2-0.1B_all_arithmetic+eng_final_model_lr_8.0e-05"
-
-default_config:
-  seed: 42
-  batch_size: 3
-  gradient_accumulation_steps: 5
-  epochs: 1
-  max_steps: 500
-  num_warmup_steps: 1
-  validation_steps: 5
-  save_checkpoint_steps: 999
-  scheduler_type: "cosine"
-  weight_decay: 0.0
-  gradient_clipping_threshold: 1.0
-  max_length: 256
-  join_or_subsequence: true
-  use_wandb: true
-  use_local_record: true
-  save_models: false
-  device: "cuda"
