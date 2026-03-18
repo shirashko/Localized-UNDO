@@ -128,10 +128,8 @@ def load_relearn_configs(yaml_path):
     model_v = meta.get('model_version', 'unknown')
     relearn_lrs = meta.get('relearn_lrs', [])
 
-
     base_template['wandb_project'] = f"{model_v}_{base_template['wandb_project']}"
 
-    # Build Models to Run (Distilled + Baselines)
     models_to_run = [
         f"partial_distill_models_arith/{model_v}_{meta['method']}-arithmetic-partial_distill-"
         f"{meta['noise_config']}-alpha_{a}-beta_{meta['beta']}-seed_{meta['seed']}"
@@ -140,7 +138,7 @@ def load_relearn_configs(yaml_path):
 
     if meta.get('include_baselines'):
         baselines = data.get('baselines_library', {}).get(model_v, [])
-        models_to_run += baselines
+        models_to_run += (baselines or [])
 
     expanded_experiments = {}
 
@@ -171,14 +169,13 @@ def load_relearn_configs(yaml_path):
             meta_info['wandb_run_name'] += f"_lr{lr_val:.1e}"
             config.update(meta_info)
 
-            # Build paths
             setup_id = f"{model_v}_train_only_forget"
             config = _build_relearn_paths(config, setup_id, model_dir_name, lr_val)
 
             unique_id = f"{setup_id}_{model_dir_name}_lr{lr_val}"
             expanded_experiments[unique_id] = config
 
-    print(f"✅ Successfully loaded {len(expanded_experiments)} unique experiments.")
+    print(f"✅ Successfully loaded {len(expanded_experiments)} unique experiments for {model_v}.")
     return expanded_experiments
 
 def load_distill_configs(yaml_path, setup_id):

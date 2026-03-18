@@ -7,6 +7,10 @@ experiment_metadata:
   alphas: [0.55, 0.65, 0.7, 0.75]
   relearn_lrs: [ 1e-3, 7e-4, 4e-4, 1e-4, 7e-5, 5e-5, 1e-5, 7e-6, 4e-6, 1e-6 ]
   include_baselines: true
+  first_train_file: "pretrain/train_multiplication_division.jsonl"
+  second_train_file: null
+  interleave_probs: [ 1.0 ]
+  wandb_project: "relearn_attack_only_forget_data"
 
 baselines_library:
   gemma-2-0.3B:
@@ -34,28 +38,3 @@ default_config:
   use_local_record: true
   save_models: false
   device: "cuda"
-
-setups:
-  gemma-2-0.1B_all_data:
-    first_train_file: "pretrain/train_eng.jsonl"
-    second_train_file: "pretrain/train_all_arithmetic.jsonl"
-    interleave_probs: [0.75, 0.25]
-    wandb_project: "gemma-2-0.1B_relearn_all_data"
-
-  gemma-2-0.1B_all_data_perturb:
-    first_train_file: "pretrain/train_eng.jsonl"
-    second_train_file: "pretrain/train_all_arithmetic.jsonl"
-    interleave_probs: [0.75, 0.25]
-    wandb_project: "gemma-2-0.1B_relearn_all_data_perturb"
-
-  gemma-2-0.1B_train_only_forget:
-    first_train_file: "pretrain/train_multiplication_division.jsonl"
-    second_train_file: null
-    interleave_probs: [1.0]
-    wandb_project: "relearn_attack_only_forget_data"
-
-  gemma-2-0.3B_train_only_forget:
-    first_train_file: "pretrain/train_multiplication_division.jsonl"
-    second_train_file: null
-    interleave_probs: [1.0]
-    wandb_project: "gemma-2-0.3B_relearn_attack_only_forget_data"
