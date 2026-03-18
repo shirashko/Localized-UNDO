@@ -24,9 +24,17 @@ export PYTHONPATH=$PYTHONPATH:$(pwd)
 mkdir -p logs
 
 # --- Execute Unlearning Sweep ---
+# --- Execute Unlearning Sweep ---
+echo "--------------------------------------------------------"
 echo "Starting Unlearning Sweep on Node: $SLURMD_NODENAME"
+echo "Target Setups: $BASE_SETUPS_TO_RUN"
+echo "--------------------------------------------------------"
 
-# Note: Your python script uses launch_in_parallel_one_per_gpu.
-# If you only request 1 GPU in SLURM (above), it will run the sweep
-# sequentially (one experiment after another) on that single GPU.
+echo "[*] Full Experiment Configuration (unlearn.yaml):"
+cat configs/arithmetic/unlearn.yaml
+echo "--------------------------------------------------------"
+
 python scripts/arithmetic/run_unlearn.py
+
+echo "--------------------------------------------------------"
+echo "Unlearning Sweep Finished at $(date)"
