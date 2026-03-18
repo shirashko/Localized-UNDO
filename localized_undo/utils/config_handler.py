@@ -130,9 +130,10 @@ def load_relearn_configs(yaml_path):
 
     base_template['wandb_project'] = f"{model_v}_{base_template['wandb_project']}"
 
+    # gemma-2-0.3B_MaxEnt-arithmetic-partial_distill-arithmetic_gemma-2-0.3B_p50_delta_mask_global-alpha_0.7-beta_0.1-seed_111
     models_to_run = [
         f"partial_distill_models_arith/{model_v}_{meta['method']}-arithmetic-partial_distill-"
-        f"{meta['noise_config']}-alpha_{a}-beta_{meta['beta']}-seed_{meta['seed']}"
+        f"{meta['noise_config']}-alpha_{a}-beta_{meta['beta']}-seed_{meta['distill_seed']}"
         for a in meta.get('alphas', [])
     ]
 
