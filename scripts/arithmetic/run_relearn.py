@@ -1,9 +1,8 @@
 import argparse
 from pathlib import Path
-
 from accelerate import Accelerator
 from localized_undo.tools.relearn_langarith import relearn
-from localized_undo.utils.paths import CONFIG_DIR, MODEL_DIR
+from localized_undo.utils.paths import CONFIG_DIR
 from localized_undo.utils.config_handler import load_relearn_configs
 from localized_undo.utils.loss_functions import custom_login
 from localized_undo.utils.validation_functions import get_arithmetic_eval_fn
@@ -16,15 +15,11 @@ custom_login()
 def launch_relearn_worker(exp_id, all_configs):
     """
     Worker function to execute a single relearning experiment.
-    Maps configuration from YAML to the explicit arguments of the relearn function.
     """
     config = all_configs[exp_id]
     accelerator = Accelerator()
-
-    # Re-login in child process for safety
     custom_login()
 
-    # Initialize the arithmetic evaluation function
     eval_fn = get_arithmetic_eval_fn(
         model_name=config['model_name'],
         batch_size=config['batch_size'],
@@ -36,12 +31,10 @@ def launch_relearn_worker(exp_id, all_configs):
         accelerator=accelerator
     )
 
-    # Consolidate training files
     train_files = [config['first_train_file']]
     if config.get('second_train_file'):
         train_files.append(config['second_train_file'])
 
-    # Prepare structured metadata for WandB tracking/grouping
     extra_config = {
         'base_model_version': config.get('base_model_version', 'unknown'),
         'parent_method': config.get('parent_method', 'baseline'),
@@ -50,7 +43,6 @@ def launch_relearn_worker(exp_id, all_configs):
         'learning_rate': config.get('learning_rate', 'unknown'),
     }
 
-    # Execute the relearning process
     relearn(
         model_name=config['model_name'],
         train_files=train_files,
@@ -88,37 +80,27 @@ def launch_relearn_worker(exp_id, all_configs):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Launch a parallelized relearning sweep.")
-    parser.add_argument("--setups", nargs='+', default=["gemma-2-0.1B_train_only_forget"], help="List of setup IDs from the YAML file.")
-    args = parser.parse_args()
-
-    # 1. Load configuration and expand experiments
     yaml_path = CONFIG_DIR / "arithmetic" / "relearn.yaml"
-    all_experiments = load_relearn_configs(yaml_path, args.setups)
+
+    print(f"[*] Loading experiment configuration from: {yaml_path}")
+    all_experiments = load_relearn_configs(yaml_path)
 
     if not all_experiments:
-        print("❌ No valid experiments were loaded. Check your YAML and setups.")
+        print("❌ No valid experiments found in the configuration.")
         exit(1)
 
-    # 2. Safety Check: Verify that all referenced base models exist on disk
-    missing_models = []
-    # We use a set to avoid checking the same model path multiple times
+    # Safety Check: Base models must exist
     unique_model_paths = set(exp['model_name'] for exp in all_experiments.values())
+    missing = [p for p in unique_model_paths if not Path(p).exists()]
 
-    for model_path in unique_model_paths:
-        p = Path(model_path)
-        # Check if the path exists (load_relearn_configs already resolves final_model internally)
-        if not p.exists():
-            missing_models.append(model_path)
-
-    if missing_models:
-        print(f"❌ Error: The following base models are missing. Please check your unlearn/distill runs:")
-        for m in missing_models:
+    if missing:
+        print(f"❌ Error: The following base models are missing:")
+        for m in missing:
             print(f"  - {m}")
-        raise FileNotFoundError("One or more base models for relearning are missing.")
+        raise FileNotFoundError("Missing base models for relearning.")
 
-    # 3. Execution
-    print(f"🚀 Launching Relearning sweep for {len(all_experiments)} combinations...")
+    # Launch
+    print(f"🚀 Launching Parallel Sweep ({len(all_experiments)} jobs)...")
     task_list = [(eid, all_experiments) for eid in all_experiments.keys()]
     parallel_launcher = get_parallel_launch_wrapper(launch_relearn_worker)
     launch_in_parallel_one_per_gpu(experiment_list=task_list, experiment_fn=parallel_launcher)

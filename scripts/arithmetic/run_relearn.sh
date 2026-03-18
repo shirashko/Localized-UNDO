@@ -24,9 +24,17 @@ export PYTHONPATH=$PYTHONPATH:$(pwd)
 mkdir -p logs
 
 # --- Execute Relearning Sweep ---
+echo "--------------------------------------------------------"
 echo "Starting Relearning Sweep on Node: $SLURMD_NODENAME"
-echo "Target Setup: gemma-2-0.3B_train_only_forget"
+echo "Date: $(date)"
+echo "--------------------------------------------------------"
 
-python scripts/arithmetic/run_relearn.py --setups gemma-2-0.3B_train_only_forget
+echo "[*] Full Experiment Configuration (relearn.yaml):"
+cat configs/arithmetic/relearn.yaml
+echo "--------------------------------------------------------"
 
+python scripts/arithmetic/run_relearn.py
+
+echo "--------------------------------------------------------"
 echo "Relearning Sweep Finished at $(date)"
+echo "--------------------------------------------------------"
