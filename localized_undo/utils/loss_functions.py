@@ -9,18 +9,21 @@ except ImportError:
     HUGGINGFACE_HUB_AVAILABLE = False
 
 def custom_makedirs(path, exist_ok):
-    if os.path.exists(path):
+    path_str = str(path)
+
+    if os.path.exists(path_str):
         if not exist_ok:
-            error_message = f"[loss_functions.py/custom_makedirs] Error: Directory already exists: {path}, if you mean to overwrite this, manually remove first"
+            error_message = f"[loss_functions.py/custom_makedirs] Error: Directory already exists: {path_str}, if you mean to overwrite this, manually remove first"
             print(f"\033[93m{error_message}\033[0m")
             raise FileExistsError(error_message)
         else:
-            print(f"[loss_functions.py/custom_makedirs] Directory or file already exists: {path}")
+            print(f"[loss_functions.py/custom_makedirs] Directory or file already exists: {path_str}")
     else:
-        if '.' in path[-6:]:
-            path = os.path.dirname(path)
-        os.makedirs(path, exist_ok=True)
-        print(f"[loss_functions.py/custom_makedirs] Created directory: {path}")
+        if '.' in path_str[-6:]:
+            path_str = os.path.dirname(path_str)
+
+        os.makedirs(path_str, exist_ok=True)
+        print(f"[loss_functions.py/custom_makedirs] Created directory: {path_str}")
 
 def custom_login():
     HF_TOKEN_PATH = "tokens/hf_token.txt"
