@@ -1,24 +1,12 @@
-# 🔬 Localized UNDO: Targeted Distillation Robustifies Unlearning
+## 🔬 Localized UNDO: Targeted Noise Eases Distillation Compute while Remaining Robust Unlearning
 
-## ⚡ Quick Start
+This repository contains the code and instructions to reproduce the experiments from our paper on localized unlearning via targeted noise injection. The project is structured around two main experimental settings: **WMDP (Bio/Cyber)** and **Arithmetic**.
 
-For users who want to run a minimal example on language tasks:
+---
 
-1. Complete the [Environment Setup](#-setting-up-environment)
-2. Follow [Set up only language](#-set-up-only-language) instructions
-3. Run scripts in the following sequence: pretrain, unlearn, select_unlearn_model, partial-distill, relearn. Update the configs before running each script to specify the exact configuration you want to run.
-
-This will get you up and running with the core functionality on a single task type.
-
-## 📋 Prerequisites
-
-* Python 3.8+
-* CUDA-compatible GPU(s) recommended. Params set for H200s. For GPU's with less GPU memory, try reducing batch size and increasing gradient accumulation by the same factor.
-
-## 📝 General Notes
-
-* All scripts are meant to be run from scripts directory.
-* Most run_* scripts will automatically run on all available GPUs, running several processes in parallel or sequentially as available until all specified settings have been run. To restrict the GPU's, precede the command with `CUDA_VISIBLE_DEVICES={desired devices}`.
+### 📋 Prerequisites
+* **Python:** 3.8+.
+* **Hardware:** CUDA-compatible GPU(s) recommended. Params are optimized for **H100/H200 GPUs**. For consumer GPUs (e.g., RTX 2080/3090/4090), you **must** reduce `batch_size` and increase `gradient_accumulation_steps` proportionally to avoid Out-Of-Memory (OOM) errors.
 
 ## 🛠️ Setting Up Environment
 
@@ -28,46 +16,44 @@ This will get you up and running with the core functionality on a single task ty
 4. `uv sync`
 5. `source .venv/bin/activate`
 
-## 🚀 Initial Dataset + Model Processing
+### 💡 General Tips
+* **Authentication:** Add your Hugging Face token to `tokens/hf_token.txt` and WandB token to `tokens/wandb_token.txt`.
+* **Gated Models:** [Gemma-2-2b](https://huggingface.co/google/gemma-2-2b) requires manual license acceptance on Hugging Face before download scripts will work.
+* **Parallel Launch:** Most scripts use a `launch_in_parallel_one_per_gpu` utility to automatically run multiple hyperparameter experiments (e.g., different learning rates) simultaneously across available GPUs.
+* **Monitoring:** Integrated with **Weights & Biases (WandB)** to log "Forget" and "Retain" set metrics in real-time.
+---
 
-### ⚙️ Set up for all settings
+### 🧪 Setting: WMDP (Bio/Cyber Unlearning)
+Use this to reproduce unlearning of hazardous knowledge from the Weapon-Masked Data Poisoning (WMDP) benchmark.
 
-1. Add a huggingface token to `tokens/hf_token.txt` and a wandb token to `tokens/wandb_token.txt. Additionally, since Gemma-2-2b is gated, you must manually request access by visiting the [Gemma-2-2b Model Page](https://huggingface.co/google/gemma-2-2b) and accept the license agreement.
-2. `python localized_undo/prepare_models/prepare_reduced_gemma.py`
-3. `python localized_undo/prepare_data/download_datasets.py --mode all`
-4. `python localized_undo/prepare_data/download_arithmetic.py`
-5. Generate WMDP question-answer datasets via `wmdp_question_extraction.py`
-6. `python localized_undo/prepare_data/prepare.py`
+#### 1. Setup & Data Prep
+1.  **Download Model:** `python localized_undo/prepare_models/download_gemma.py`.
+2.  **Download Base Data:** `python localized_undo/prepare_data/download_datasets.py --mode wmdp`.
+3.  **Generate QA Pairs:** `python wmdp_question_extraction.py` (Requires `GOOGLE_API_KEY` for Gemini to generate the synthetic forget/retain corpora).
+4.  **Finalize:** `python localized_undo/prepare_data/prepare.py`.
 
-### 🗣️ Set up only language
+#### 2. Execution Sequence
+Run these from the **root directory**:
+1.  **Unlearn:** `python run_unlearn_wmdp.py` — Hyperparameter sweep for methods like **MaxEnt** and **RMU**.
+2.  **Select:** `python select_unlearn_model.py` — Identifies the optimal checkpoint balancing forget-set removal with retain-set performance.
+3.  **Distill (UNDO):** `python run_partial_distill_wmdp.py` — The core step distilling the unlearned model into a noised copy to scrub latent capabilities.
+4.  **Relearn:** `python run_relearn_wmdp.py` — Evaluates robustness by attempting to recover forgotten knowledge via adversarial fine-tuning.
 
-Run steps 1-2 above, then run step 3 with the language flag:
+---
 
-* `python localized_undo/prepare_data/download_datasets.py --mode language`
+### 🔢 Setting: Arithmetic
+Forget set = multiplication and division (equations and word problems).
+Retain set = addition and subtraction (equations and word problems).
 
-This will only download the specific datasets required for language tasks. Finish by running step 6. Skip steps 4 and 5.
+#### 1. Setup & Data Prep
+1.  **Prepare Model:** `python localized_undo/prepare_models/reduce_gemma.py` (Creates a smaller version of Gemma for faster iteration).
+2.  **Download Data:** `python localized_undo/prepare_data/download_datasets.py --mode arithmetic`.
+3.  **Generate Math:** `python localized_undo/prepare_data/download_arithmetic.py`.
+4.  **Finalize:** `python localized_undo/prepare_data/prepare.py`.
 
-### 🔢 Set up only arithmetic
+#### 2. Execution Sequence
+1.  **Pretrain:** `python run_pretrain_arithmetic.py` — Establishes the initial model with math capabilities.
+2.  **Unlearn:** `python run_unlearn_arithmetic.py`.
+3.  **Distill:** `python run_partial_distill_arithmetic.py`.
+4.  **Relearn:** `python run_relearn_arithmetic.py`.
 
-Run steps 1-2 above, then run step 3 with the arithmetic flag:
-
-* `python localized_undo/prepare_data/download_datasets.py --mode arithmetic`
-
-Followed by step 4 and 6. Skip step 5.
-
-### 🧪 Set up only WMDP
-
-Run steps 1-2 above, then run step 3 with the WMDP flag:
-
-* `python localized_undo/prepare_data/download_datasets.py --mode wmdp`
-
-Followed by step 5 and 6. Skip step 4.
-
-## ▶️ Running Scripts
-
-All scripts can be run using
-
-```bash
-python run_...py
-
-```
