@@ -13,7 +13,7 @@ from localized_undo.utils.paths import CACHE_DIR, WMDP_MODEL_DIR
 from localized_undo.utils.loss_functions import custom_makedirs, custom_login
 
 
-SAVE_DIR = WMDP_MODEL_DIR + "/gemma-2-2b"
+SAVE_DIR = WMDP_MODEL_DIR / "gemma-2-2b"
 
 def main():
     # 1) Log into HF
