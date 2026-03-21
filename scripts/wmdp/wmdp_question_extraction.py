@@ -17,6 +17,7 @@ from google import genai
 from google.genai import types 
 from google.genai.errors import ServerError
 
+import itertools
 from numpy import ndarray
 from pydantic import BaseModel, Field
 
@@ -142,28 +143,22 @@ def load_filtered_jsonl(
     """
     filtered_data = []
     with open(file_path, 'r') as f:
-        for i, line in enumerate(f):
-            # Process only lines within the requested range
-            if start_idx <= i < end_idx:
-                item = json.loads(line)
+        target_lines = itertools.islice(enumerate(f), start_idx, end_idx)
 
-                # Add raw strings into the dictionary
-                if isinstance(item, str):
-                    item = {"text": item}
+        for i, line in target_lines:
+            example = json.loads(line)
 
-                # Assign global index for source tracking
-                item['idx'] = i
+            if isinstance(example, str):
+                example = {"text": example}
 
-                if tokenizer is not None:
-                    # Calculate length based on tokens
-                    item['len'] = len(tokenizer(item["text"])['input_ids'])
-                    if item['len'] < min_len or item['len'] > max_len:
-                        continue
-                filtered_data.append(item)
+            example['idx'] = i
 
-            # Stop reading once the range is exceeded
-            elif i >= end_idx:
-                break
+            if tokenizer is not None:
+                example['len'] = len(tokenizer(example["text"])['input_ids'])
+                if example['len'] < min_len or example['len'] > max_len:
+                    continue
+
+            filtered_data.append(example)
 
     return Dataset.from_list(filtered_data)
 
