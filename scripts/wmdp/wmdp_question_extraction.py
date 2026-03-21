@@ -8,7 +8,7 @@ import textwrap
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Annotated, Literal, NewType, TypedDict, Callable, Iterable, List, TypeVar, Any, Tuple
+from typing import Annotated, Literal, NewType, TypedDict, Callable, Iterable, List, TypeVar, Any, Tuple, Union
 from datasets import Dataset
 import numpy as np
 import seaborn as sns
@@ -107,21 +107,64 @@ async def concurrent_single_requests(
     
     return results
 
-# from numpy import Vector
-def load_filtered_jsonl(file_path, start_idx, end_idx, tokenizer=None, min_len=0, max_len=math.inf):
+
+def load_filtered_jsonl(
+        file_path: Union[str, Path],
+        start_idx: int,
+        end_idx: int,
+        tokenizer: Any = None,
+        min_len: int = 0,
+        max_len: float = math.inf
+) -> Dataset:
+    """
+    Selectively loads and filters records from a JSONL file within a specific index range.
+
+    This function facilitates stream-based processing of large-scale corpora (e.g., Wikipedia)
+    by reading only a designated slice of the file. It standardizes input formats and
+    performs token-level length validation to ensure data quality for LLM tasks.
+
+    Args:
+        file_path: Path to the input .jsonl file.
+        start_idx: The global line index (inclusive) to start processing from.
+        end_idx: The global line index (exclusive) to stop processing at.
+        tokenizer: An optional tokenizer (e.g., HuggingFace AutoTokenizer) to calculate
+            token-level sequence length.
+        min_len: Minimum token count required for a record to be included.
+        max_len: Maximum token count allowed for a record to be included.
+
+    Returns:
+        A `datasets.Dataset` object containing the validated records, each including
+        the original text, its global index (`idx`), and its token length (`len`).
+
+    Notes:
+        - The `idx` field preserves the original line number, which is
+          essential for mapping generated outputs (like QA) back to source documents.
+    """
     filtered_data = []
     with open(file_path, 'r') as f:
         for i, line in enumerate(f):
-            if i >= start_idx and i < end_idx:
+            # Process only lines within the requested range
+            if start_idx <= i < end_idx:
                 item = json.loads(line)
+
+                # Add raw strings into the dictionary
                 if isinstance(item, str):
                     item = {"text": item}
-                item['idx'] = i  # Add the index directly
+
+                # Assign global index for source tracking
+                item['idx'] = i
+
                 if tokenizer is not None:
+                    # Calculate length based on tokens
                     item['len'] = len(tokenizer(item["text"])['input_ids'])
                     if item['len'] < min_len or item['len'] > max_len:
                         continue
                 filtered_data.append(item)
+
+            # Stop reading once the range is exceeded
+            elif i >= end_idx:
+                break
+
     return Dataset.from_list(filtered_data)
 
 
