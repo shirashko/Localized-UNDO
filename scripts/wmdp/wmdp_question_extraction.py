@@ -26,8 +26,10 @@ import random
 
 
 PROMPT_TYPE = 'wikipedia'
+GEMINI_MODEL_NAME = 'gemini-2.0-flash'
+T = TypeVar('T')
+R = TypeVar('R')
 
-gemini_model_name = 'gemini-2.0-flash'
 def mk_gemini_client():
     root_dir = Path(__file__).resolve().parents[2]
     GEMINI_TOKEN_PATH = root_dir / "tokens" / "gemini_token.txt"
@@ -44,9 +46,6 @@ def batched(list, batch_size, include_leftovers):
             continue
         batches.append(tuple(cur_batch))
     return batches
-
-T = TypeVar('T')
-R = TypeVar('R')
 
 async def concurrent_single_requests(
     fn: Callable[[T], R],
@@ -403,7 +402,7 @@ async def gemini_quiz_req(
             return (
                 await client.aio.models.generate_content(
                     contents=batch,
-                    model=gemini_model_name,
+                    model=GEMINI_MODEL_NAME,
                     config=types.GenerateContentConfig(
                         temperature=0,
                         response_mime_type="application/json",
@@ -422,7 +421,7 @@ async def rate_req(client: genai.Client, rounds: Sequence[QA], *, limiter: Async
             return (
                 await client.aio.models.generate_content(
                     contents=batch.question,
-                    model=gemini_model_name,
+                    model=GEMINI_MODEL_NAME,
                     config=types.GenerateContentConfig(
                         temperature=0,
                         response_mime_type="application/json",
@@ -510,7 +509,7 @@ async def filter_batch(
         return (
             await client.aio.models.generate_content(
                 contents=batch,
-                model=gemini_model_name,
+                model=GEMINI_MODEL_NAME,
                 config=types.GenerateContentConfig(
                     temperature=0,
                     response_mime_type="application/json",
