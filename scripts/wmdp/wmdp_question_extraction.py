@@ -24,6 +24,10 @@ from pydantic import BaseModel, Field
 from transformers import AutoTokenizer
 from localized_undo.utils.paths import DATASET_DIR
 import random
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
 PROMPT_TYPE = 'wikipedia'
