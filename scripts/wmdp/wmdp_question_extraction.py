@@ -8,7 +8,7 @@ import textwrap
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Annotated, Literal, NewType, TypedDict, Callable, Iterable, List, TypeVar, Any
+from typing import Annotated, Literal, NewType, TypedDict, Callable, Iterable, List, TypeVar, Any, Tuple
 from datasets import Dataset
 import numpy as np
 import seaborn as sns
@@ -38,12 +38,19 @@ def mk_gemini_client():
     client = genai.Client(api_key=token)
     return client
 
-def batched(list, batch_size, include_leftovers):
+
+def batched(data: List[Any], batch_size: int, include_leftovers: bool) -> List[Tuple[Any, ...]]:
+    """
+    Splits a list into smaller batches of a fixed size.
+    """
     batches = []
-    for i in range(0, len(list), batch_size):
-        cur_batch = list[i:i+batch_size]
+    for i in range(0, len(data), batch_size):
+        cur_batch = data[i: i + batch_size]
+
+        # Logic to handle the last batch if it's smaller than batch_size
         if len(cur_batch) < batch_size and not include_leftovers:
             continue
+
         batches.append(tuple(cur_batch))
     return batches
 
