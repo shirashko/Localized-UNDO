@@ -50,7 +50,7 @@ def batched(list, batch_size, include_leftovers):
 async def concurrent_single_requests(
     fn: Callable[[T], R],
     arguments: Iterable[T],
-    limiter: Any,  # This would be an AsyncLimiter instance
+    limiter: AsyncLimiter,
     data_len: int
 ) -> List[R]:
     """
