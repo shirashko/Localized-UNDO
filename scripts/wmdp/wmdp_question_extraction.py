@@ -54,30 +54,46 @@ async def concurrent_single_requests(
     data_len: int
 ) -> List[R]:
     """
-    Execute an async function concurrently with each argument from an iterable,
-    limiting concurrency using an AsyncLimiter.
-    
+    Executes an asynchronous function concurrently across an iterable of arguments
+    while strictly adhering to rate limits defined by an AsyncLimiter.
+
+    This utility orchestrates parallel API calls (e.g., to LLM providers) to maximize
+    throughput. It ensures that although execution is unordered and concurrent,
+    the resulting list maintains the original input order.
+
     Args:
-        fn: The async function to execute
-        arguments: Iterable of arguments to pass to the function
-        limiter: An AsyncLimiter instance to control concurrency
-        data_len: The expected length of the result list
-    
+        fn: The function to be executed for each item.
+            Must accept a single argument of type T and return type R.
+        arguments: An iterable of inputs (type T) to be processed by `fn`.
+        limiter: An `aiolimiter.AsyncLimiter` instance used to gate the
+            execution of `fn` and prevent RateLimitExceeded errors (e.g., HTTP 429).
+        data_len: The total number of items in `arguments`. Used to pre-allocate
+            the results list for O(1) positional assignment.
+
     Returns:
-        A list containing the results of each function call in the same order
+        A list of results of type R, where the i-th result corresponds to
+        the i-th argument, regardless of the completion order of the tasks.
+
+    Notes:
+        - The function uses `asyncio.create_task` to schedule all jobs immediately.
+        - The `async with limiter` context manager ensures that the number of
+          active requests within a time window does not exceed the quota.
+        - If `fn` includes retry logic (e.g., exponential backoff), the limiter
+          will continue to gate each individual retry attempt.
     """
+    # To follow the result matched to the input arguments
     results = [None] * data_len
     
     async def process_item(item: T, index: int):
         async with limiter:
-            result = await fn(item)
+            result = await fn(item) # The actual Gemini API call is made here
             results[index] = result
-    
-    # Create a task for each argument
-    tasks = []
-    for i, arg in enumerate(arguments):
-        task = asyncio.create_task(process_item(arg, i))
-        tasks.append(task)
+
+    # Create and schedule all tasks (for each argument) immediately
+    tasks = [
+        asyncio.create_task(process_item(arg, i))
+        for i, arg in enumerate(arguments)
+    ]
     
     # Wait for all tasks to complete
     await asyncio.gather(*tasks)
