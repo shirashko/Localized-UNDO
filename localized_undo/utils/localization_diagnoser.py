@@ -28,7 +28,6 @@ class MaskMechanisticDiagnostic:
         ).to(self.device)
         self.model.eval()
 
-        # Cache original weights to restore them between tests
         self.original_weights = {n: p.data.clone() for n, p in self.model.named_parameters()}
 
         self.eval_fn = get_arithmetic_eval_fn(
@@ -49,75 +48,82 @@ class MaskMechanisticDiagnostic:
                 p.data.copy_(self.original_weights[n])
 
     @torch.no_grad()
-    def apply_mask_corruption(self, mask: Dict[str, torch.Tensor], noise_alpha: float, noise_beta: float,
-                              seed: int = 42):
-        """
-        Intervention: Applies 'Shrink and Perturb' corruption instead of zeroing out.
-        Formula: W_new = (1 - alpha*mask) * W_old + (alpha*mask) * (noise_beta * Noise)
-        """
-        torch.manual_seed(seed)
+    def apply_mask_erasure(self, mask: Dict[str, torch.Tensor]):
+        """ Zeroing out method"""
         applied_layers = 0
-
-        # Pre-clean mask keys to match model naming
         normalized_mask = {k.replace("model.", ""): v for k, v in mask.items()}
 
         for n, p in self.model.named_parameters():
             clean_n = clean_parameter_name(n)
+            if clean_n.startswith("model."): clean_n = clean_n[6:]
 
-            # Handle standard naming cleanup similar to do_corruption
+            if clean_n in normalized_mask:
+                m = normalized_mask[clean_n].to(device=p.device, dtype=p.dtype)
+                p.data *= (1.0 - m.view(p.shape))
+                applied_layers += 1
+        return applied_layers
+
+    @torch.no_grad()
+    def apply_mask_corruption(self, mask: Dict[str, torch.Tensor], alpha: float, beta: float, seed: int = 42):
+        """Shrink and Perturb"""
+        torch.manual_seed(seed)
+        applied_layers = 0
+        normalized_mask = {k.replace("model.", ""): v for k, v in mask.items()}
+
+        for n, p in self.model.named_parameters():
+            clean_n = clean_parameter_name(n)
             if clean_n.startswith("model."):
                 clean_n = clean_n[6:]
 
             if clean_n in normalized_mask:
                 m = normalized_mask[clean_n].to(device=p.device, dtype=p.dtype)
 
-                # Generate Noise (Xavier Uniform for weights, zero for others)
                 if len(p.data.shape) >= 2:
                     noise = torch.nn.init.xavier_uniform_(torch.empty_like(p.data))
                 else:
                     noise = torch.zeros_like(p.data)
 
-                corruption = noise_beta * noise
-                effective_alpha = noise_alpha * m.view(p.shape)
-
-                # Apply Corruption Formula
+                corruption = beta * noise
+                effective_alpha = alpha * m.view(p.shape)
                 p.data = (1.0 - effective_alpha) * p.data + effective_alpha * corruption
                 applied_layers += 1
+        return applied_layers
 
-        print(f"[DEBUG] Corruption applied to {applied_layers} layers using alpha={noise_alpha}, beta={noise_beta}.")
-
-    def run_on_folder(self, folder_path, noise_alpha: float = 0.1, noise_beta: float = 0.1):
-        """Processes a folder and evaluates the corrupted model."""
+    def run_on_folder(self, folder_path, mode="corruption", alpha=0.75, beta=0.1):
         results = {}
         mask_path = os.path.join(folder_path, "mask.pt")
-
         if not os.path.exists(mask_path):
             return None
 
-        print(f"\n[Diagnostic] Analyzing: {os.path.basename(folder_path)} with Corruption")
+        print(f"\n[Diagnostic] Mode: {mode.upper()} | Analyzing: {os.path.basename(folder_path)}")
 
         # 1. Baseline
         self.restore()
-        results["Baseline_Unlearned"] = self.eval_fn(self.model, print_results=False)
+        results["Baseline"] = self.eval_fn(self.model, print_results=False)
 
-        # 2. Intervention: Apply Corruption instead of erasure
+        # 2. Intervention
         self.restore()
-        mask = torch.load(mask_path, map_location=self.device)
-        self.apply_mask_corruption(mask, noise_alpha=noise_alpha, noise_beta=noise_beta)
-        results[f"Corrupted_a{noise_alpha}_b{noise_beta}"] = self.eval_fn(self.model, print_results=False)
+        mask = torch.load(mask_path, map_location=self.device, weights_only=True)
 
+        if mode == "erasure":
+            applied = self.apply_mask_erasure(mask)
+            tag = "Erasure"
+        else:
+            applied = self.apply_mask_corruption(mask, alpha, beta)
+            tag = f"Corruption_a{alpha}_b{beta}"
+
+        print(f"[DEBUG] Intervention applied to {applied} layers.")
+        results[tag] = self.eval_fn(self.model, print_results=False)
         self.restore()
 
-        if self.device.type == "cuda":
-            torch.cuda.empty_cache()
-
-        with open(os.path.join(folder_path, "diagnostic_corruption_metrics.json"), "w") as f:
+        output_name = f"diagnostic_{mode}_metrics.json"
+        with open(os.path.join(folder_path, output_name), "w") as f:
             json.dump(results, f, indent=4)
 
-        self.plot_diagnostic(results, folder_path, noise_alpha, noise_beta)
+        self.plot_diagnostic(results, folder_path, mode, alpha if mode == "corruption" else None)
         return results
 
-    def plot_diagnostic(self, results, output_dir, alpha, beta):
+    def plot_diagnostic(self, results, output_dir, mode, alpha=None):
         forget_keys = ['val/multiplication_equation_acc', 'val/division_equation_acc']
         retain_keys = ['val/addition_equation_acc', 'val/subtraction_equation_acc']
 
@@ -129,16 +135,17 @@ class MaskMechanisticDiagnostic:
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
         x = np.arange(len(labels))
 
-        ax1.bar(x - 0.2, forget_accs, 0.4, label='Forget Set Acc', color='crimson')
-        ax1.bar(x + 0.2, retain_accs, 0.4, label='Retain Set Acc', color='seagreen')
+        title_suffix = f"(Alpha={alpha})" if alpha else ""
+        ax1.bar(x - 0.2, forget_accs, 0.4, label='Forget Set (Mult/Div)', color='crimson')
+        ax1.bar(x + 0.2, retain_accs, 0.4, label='Retain Set (Add/Sub)', color='seagreen')
         ax1.set_xticks(x)
         ax1.set_xticklabels(labels, rotation=15)
-        ax1.set_title(f"Corruption Impact (Alpha={alpha}, Beta={beta}) on Arithmetic Tasks")
+        ax1.set_title(f"{mode.capitalize()} Impact on Arithmetic {title_suffix}")
         ax1.legend()
 
         ax2.bar(labels, eng_losses, color=['gray', 'blue'])
         ax2.set_title("Language Damage (CE Loss)")
 
         plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, "localization_corruption_diagnostic.png"))
+        plt.savefig(os.path.join(output_dir, f"diagnostic_{mode}_plot.png"))
         plt.close()
