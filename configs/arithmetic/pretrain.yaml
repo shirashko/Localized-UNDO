@@ -35,6 +35,7 @@ setups:
     interleave_probs: [0.875, 0.125]
     wandb_run_name: "gemma-2-0.1B-oracle"
 
+    # --- Models 0.3B ---
   gemma-2-0.3B_all_arithmetic+eng:
     model_id: "gemma-2-0.3B"
     arithmetic_type: "all_arithmetic"
