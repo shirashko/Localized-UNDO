@@ -48,3 +48,15 @@ class DirectionalMaskFactory:
         # Targeted only at the MLP output (down_proj)
         is_down_proj = "down_proj" in name
         return is_down_proj and not is_excluded
+
+    @staticmethod
+    def compute_random_mask(param: torch.Tensor, k: int) -> torch.Tensor:
+        """Projects weights onto the null-space of k random directions."""
+        d_out = param.shape[0]
+        # Generate random orthonormal vectors using QR decomposition
+        random_matrix = torch.randn(d_out, k, device=param.device)
+        q, _ = torch.linalg.qr(random_matrix)  # q represents k random orthogonal directions
+
+        identity = torch.eye(d_out, device=param.device)
+        projection_matrix = identity - torch.mm(q, q.t())
+        return projection_matrix
