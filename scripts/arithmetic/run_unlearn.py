@@ -8,7 +8,7 @@ from localized_undo.utils.validation_functions import get_arithmetic_eval_fn
 from localized_undo.utils.parallel_launch import launch_in_parallel_one_per_gpu, get_parallel_launch_wrapper
 
 # Define which base methods we want to sweep
-BASE_SETUPS_TO_RUN = ["gemma-2-0.1B_MaxEnt"]
+BASE_SETUPS_TO_RUN = ["gemma-2-0.3B_MaxEnt"]
 
 # Load expanded setups from YAML
 yaml_path = CONFIG_DIR / "arithmetic" / "unlearn.yaml"
@@ -72,14 +72,14 @@ def launch_unlearning_run(setup_id):
         max_length=config['max_length'],
 
         # Optimization Hyperparameters
-        seed=config.get('seed', 42),
+        seed=config['seed'],
         device=config.get('device', 'cuda'),
         batch_size=config['batch_size'],
-        gradient_accumulation_steps=config.get('gradient_accumulation_steps', 16),
+        gradient_accumulation_steps=config['gradient_accumulation_steps'],
         epochs=config.get('epochs', 1),
         learning_rate=config['learning_rate'],
         max_steps=config.get('max_steps', -1),
-        num_warmup_steps=config.get('num_warmup_steps', 100),
+        num_warmup_steps=config['num_warmup_steps'],
         validation_steps=config.get('validation_steps', 50),
         save_checkpoint_steps=config.get('save_checkpoint_steps', 1500),
         scheduler_type=config.get('scheduler_type', "cosine"),
