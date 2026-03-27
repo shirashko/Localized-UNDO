@@ -1,4 +1,3 @@
-# localized_undo/masks_utils/weight_surgeon.py
 import torch
 from typing import Dict
 
@@ -26,3 +25,4 @@ class WeightSurgeon:
                 param.data = torch.mm(p_matrix, param.data)
                 # Cleanup mask from GPU immediately after use to save space
                 del p_matrix
+
