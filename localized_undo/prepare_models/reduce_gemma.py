@@ -21,7 +21,7 @@ MODEL = "google/gemma-2-2b"
 HF_TOKEN_PATH = "tokens/hf_token.txt"
 
 # Change this to wherever you want to save your smaller model
-NEW_MODEL_DIR = MODEL_DIR / "random_init_models" / "gemma-2-"
+NEW_MODEL_DIR = MODEL_DIR + "/random_init_models/gemma-2-"
 REDUCE_TO = "0.1B"
 
 custom_configurations = {
@@ -111,15 +111,13 @@ def main(REDUCE_TO):
     print(f"[reduce_gemma_model.py] New small model size: {total_params/1e6:.2f}M parameters")
 
     # 6) Save the new model & tokenizer
-    final_save_path = f"{NEW_MODEL_DIR}{REDUCE_TO}"
-
-    print(f"[reduce_gemma_model.py] Saving new small model to: {final_save_path}")
-    os.makedirs(final_save_path, exist_ok=True)
-    model.save_pretrained(final_save_path)
-    tokenizer.save_pretrained(final_save_path)
+    print(f"[reduce_gemma_model.py] Saving new small model to: {NEW_MODEL_DIR+REDUCE_TO}")
+    os.makedirs(NEW_MODEL_DIR+REDUCE_TO, exist_ok=True)
+    model.save_pretrained(NEW_MODEL_DIR+REDUCE_TO)
+    tokenizer.save_pretrained(NEW_MODEL_DIR+REDUCE_TO)
 
     print("[reduce_gemma_model.py] Done! You can now load from this directory with:")
-    print(f"  AutoModelForCausalLM.from_pretrained('{final_save_path}')")
+    print(f"  AutoModelForCausalLM.from_pretrained('{NEW_MODEL_DIR+REDUCE_TO}')")
 
 if __name__ == "__main__":
     for model_size in ['0.1B', '0.3B', '0.6B', '0.9B']:
