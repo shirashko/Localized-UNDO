@@ -1,0 +1,49 @@
+# --- Secrets & local auth (never commit) ---
+.env
+.env.*
+!.env.example
+tokens/
+
+# --- Python ---
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# --- Tools ---
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/
+
+# --- Project caches & downloads ---
+.cache/
+
+# --- ML experiment & training outputs ---
+wandb/
+models/
+datasets/
+
+# --- Job / script logs (any directory named logs/) ---
+logs/
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- OS & editors ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
