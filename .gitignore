@@ -96,6 +96,7 @@ ipython_config.py
 wandb/
 models/
 datasets/
+localization_masks/**/*.png
 *.pt
 *.pth
 *.safetensors
