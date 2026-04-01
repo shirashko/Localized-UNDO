@@ -95,6 +95,7 @@ ipython_config.py
 .cache/
 wandb/
 models/
+plots/
 datasets/
 localization_masks/**/*.png
 *.pt
