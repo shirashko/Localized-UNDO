@@ -261,7 +261,7 @@ def load_unlearn_configs(yaml_path, base_setup_ids):
 
             config = config_template.copy()
             config['learning_rate'] = lr_val
-            config['min_lr'] = float(config.get('min_lr', lr_val))
+            config['min_lr'] = lr_val
 
             # Paths from YAML
             config['model_name'] = str(MODEL_DIR / config['model_rel_path'])
