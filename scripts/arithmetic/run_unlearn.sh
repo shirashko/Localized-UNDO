@@ -27,7 +27,7 @@ mkdir -p logs
 # --- Execute Unlearning Sweep ---
 echo "--------------------------------------------------------"
 echo "Starting Unlearning Sweep on Node: $SLURMD_NODENAME"
-echo "Target Setups: $BASE_SETUPS_TO_RUN"
+echo "Target setups are defined in scripts/arithmetic/run_unlearn.py (BASE_SETUPS_TO_RUN)."
 echo "--------------------------------------------------------"
 
 echo "[*] Full Experiment Configuration (unlearn.yaml):"
