@@ -320,6 +320,7 @@ def unlearn_maxent(
         model.train()
 
         for step_in_epoch in range(steps_per_epoch):
+            did_update = False
             # 1) Get forget batch
             try:
                 forget_batch = next(forget_loader_iter)
@@ -446,6 +447,7 @@ def unlearn_maxent(
                 scheduler.step()
                 optimizer.zero_grad()
                 global_step += 1
+                did_update = True
             else:
                 # Standard backprop for non-SAM or non-update steps
                 accelerator.backward(total_loss)
@@ -456,9 +458,10 @@ def unlearn_maxent(
                     scheduler.step()
                     optimizer.zero_grad()
                     global_step += 1
+                    did_update = True
 
             # Logging every few steps (after parameter updates)
-            if global_step > 0 and (global_step == 1 or global_step % 5 == 0):
+            if did_update and global_step > 0 and (global_step == 1 or global_step % 5 == 0):
                 msg = (
                     f"[maxent.py] Epoch {epoch+1}/{epochs}, Step {global_step}/{total_steps}, "
                     f"Uniform-Forget => CE_forget(uniform): {uniform_ce_forget:.6f}"
