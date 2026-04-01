@@ -38,6 +38,10 @@ setups:
     method: "MaxEnt"
     # Pointing to the final_model from the Unlearning stage - use the best model from the select_unlearn_model.py script
     teacher_rel_path: "unlearned_models/MaxEnt/pretrained_models_gemma-2-0.1B_all_arithmetic+eng_final_model_lr_8.0e-05/final_model"
+    # Optional: if provided, distillation student is initialized from this path
+    # and corruption/noise (alpha, beta, mask) can be fully skipped.
+    # student_rel_path: "partial_distill_models_arith/your_preablated_student/final_model"
+    # skip_student_corruption: true
     wandb_project: "arithmetic_distillation"
     noise_type: "delta-mask" # Options: "global", "delta-mask", "snmf", etc.
     noise_mask_dir_name: "arithmetic_p50_delta_mask_global"
@@ -46,6 +50,8 @@ setups:
     method: "MaxEnt"
     # Pointing to the final_model from the Unlearning stage - use the best model from the select_unlearn_model.py script
     teacher_rel_path: "unlearned_models/MaxEnt/pretrained_models_gemma-2-0.3B_all_arithmetic+eng_final_model_lr_1.0e-04/final_model"
+    student_rel_path: "ablated_models/gemma-2-0.3B_snmf_ablated"
+    skip_student_corruption: true
     wandb_project: "arithmetic_distillation"
-    noise_type: "random" # Options: "global", "delta-mask", "snmf", etc.
-    noise_mask_dir_name: "arithmetic_gemma-2-0.3B_p50_random_global"
+    # noise_type: "random" # Options: "global" or "delta-mask"
+    # noise_mask_dir_name: "arithmetic_gemma-2-0.3B_p50_random_global"

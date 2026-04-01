@@ -194,8 +194,24 @@ def load_distill_configs(yaml_path, setup_id):
     sweep = data['sweeps']
     expanded_experiments = {}
 
-    for alpha in sweep['alphas']:
-        for beta in sweep['betas']:
+    # Optional setup behavior:
+    # - student_rel_path: initialize student from a custom checkpoint path
+    # - skip_student_corruption: disable shrink+perturb/noise entirely
+    #   (defaults to True when student_rel_path is explicitly provided)
+    custom_student_rel_path = base_template.get('student_rel_path')
+    skip_student_corruption = base_template.get('skip_student_corruption', None)
+    if skip_student_corruption is None:
+        skip_student_corruption = custom_student_rel_path is not None
+
+    if skip_student_corruption:
+        alpha_values = [0.0]
+        beta_values = [0.0]
+    else:
+        alpha_values = sweep['alphas']
+        beta_values = sweep['betas']
+
+    for alpha in alpha_values:
+        for beta in beta_values:
             seeds = sweep['seeds'] if sweep['seeds'] else [base_template['seed']]
             for seed in seeds:
                 config = base_template.copy()
@@ -213,19 +229,36 @@ def load_distill_configs(yaml_path, setup_id):
                     raise FileNotFoundError(f"Teacher model not found: {teacher_path}")
 
                 config['teacher_model_name'] = str(teacher_path)
-                config['student_model_name'] = config['teacher_model_name']
+                if custom_student_rel_path:
+                    student_path = MODEL_DIR / custom_student_rel_path
+                    if not student_path.exists():
+                        raise FileNotFoundError(f"Student model not found: {student_path}")
+                    config['student_model_name'] = str(student_path)
+                else:
+                    config['student_model_name'] = config['teacher_model_name']
 
                 mask_name = config.get('noise_mask_dir_name')
-                if mask_name:
+                if mask_name and not skip_student_corruption:
                     mask_path = PROJECT_ROOT / "localization_masks" / mask_name / "mask.pt"
                     if not mask_path.exists():
                         raise FileNotFoundError(f"Localization mask file missing: {mask_path}")
                     config['noise_mask_path'] = str(mask_path)
 
+                if skip_student_corruption:
+                    config['noise_alpha'] = 0.0
+                    config['noise_beta'] = 0.0
+                    config['shrink_perturb_repeat'] = False
+                    config.pop('noise_mask_path', None)
+                    config['skip_student_corruption'] = True
+
                 # Experiment Identification & Naming
                 mask_config = f"{mask_name}" if mask_name else ""
-                exp_id = f"{setup_id}_{mask_config}_a{float(alpha)}_b{float(beta)}_s{seed}"
-                path_suffix = f"-{mask_config}-alpha_{alpha}-beta_{beta}-seed_{seed}"
+                if skip_student_corruption:
+                    exp_id = f"{setup_id}_{mask_config}_predefined-student_s{seed}"
+                    path_suffix = f"-{mask_config}-predefined-student-seed_{seed}"
+                else:
+                    exp_id = f"{setup_id}_{mask_config}_a{float(alpha)}_b{float(beta)}_s{seed}"
+                    path_suffix = f"-{mask_config}-alpha_{alpha}-beta_{beta}-seed_{seed}"
 
                 base_name = f"{model_name_prefix}_{method}-arithmetic-partial_distill"
 
