@@ -33,17 +33,28 @@ def analyze_sweep_from_configs(yaml_path, base_setup_ids, forget_weight=1.0, ret
                     final_val = data
 
             if final_val and baseline:
-                # Identify relevant metric columns
-                forget_cols = [k for k in final_val.keys() if 'multiplication' in k or 'division' in k]
-                math_retain_cols = [k for k in final_val.keys() if 'addition' in k or 'subtraction' in k]
+                # Metric helpers using the same names logged to W&B/local records
+                def op_acc(dct, op_name):
+                    cols = [k for k in dct.keys() if k.startswith(f"val/{op_name}_") and k.endswith("_acc")]
+                    return float(np.mean([dct[k] for k in cols])) if cols else 0.0
 
-                # --- CALCULATE RAW ACCURACIES (Absolute Values) ---
-                current_forget_acc = np.mean([final_val[k] for k in forget_cols]) if forget_cols else 0.0
-                current_retain_acc = np.mean([final_val[k] for k in math_retain_cols]) if math_retain_cols else 0.0
+                mult_acc = op_acc(final_val, "multiplication")
+                div_acc = op_acc(final_val, "division")
+                add_acc = op_acc(final_val, "addition")
+                sub_acc = op_acc(final_val, "subtraction")
+
+                base_mult_acc = op_acc(baseline, "multiplication")
+                base_div_acc = op_acc(baseline, "division")
+                base_add_acc = op_acc(baseline, "addition")
+                base_sub_acc = op_acc(baseline, "subtraction")
+
+                # Grouped averages
+                current_forget_acc = float(np.mean([mult_acc, div_acc]))
+                current_retain_acc = float(np.mean([add_acc, sub_acc]))
+                base_forget_acc = float(np.mean([base_mult_acc, base_div_acc]))
+                base_retain_acc = float(np.mean([base_add_acc, base_sub_acc]))
 
                 # --- MODE 1: RELATIVE METRICS (Efficiency vs Baseline) ---
-                base_forget_acc = np.mean([baseline[k] for k in forget_cols]) if forget_cols else 1.0
-                base_retain_acc = np.mean([baseline[k] for k in math_retain_cols]) if math_retain_cols else 1.0
 
                 rel_forget_efficiency = 1 - (current_forget_acc / max(base_forget_acc, 0.001))
                 rel_math_retention = current_retain_acc / max(base_retain_acc, 0.001)
@@ -59,6 +70,15 @@ def analyze_sweep_from_configs(yaml_path, base_setup_ids, forget_weight=1.0, ret
                 all_final_metrics.append({
                     "setup_id": setup_id,
                     "lr": float(config['learning_rate']),
+                    "initial_forget_acc": base_forget_acc,
+                    "initial_retain_acc": base_retain_acc,
+                    "final_forget_acc": current_forget_acc,
+                    "final_retain_acc": current_retain_acc,
+                    # Per-operation absolute accuracies
+                    "abs_multiplication_acc_%": mult_acc * 100,
+                    "abs_division_acc_%": div_acc * 100,
+                    "abs_addition_acc_%": add_acc * 100,
+                    "abs_subtraction_acc_%": sub_acc * 100,
                     # Relative Data
                     "rel_forget_eff_%": rel_forget_efficiency * 100,
                     "rel_math_retent_%": rel_math_retention * 100,
@@ -108,8 +128,48 @@ def analyze_sweep_from_configs(yaml_path, base_setup_ids, forget_weight=1.0, ret
     plt.grid(True, which="both", alpha=0.3)
     plt.savefig(results_out_dir / f"sweep_absolute_{base_setup_ids[0]}.pdf", bbox_inches='tight')
 
+    # --- PLOT 3: GROUP BREAKDOWN (Per-operation + group average) ---
+    fig, (ax_forget, ax_retain) = plt.subplots(1, 2, figsize=(14, 5), sharex=True)
+
+    ax_forget.semilogx(df["lr"], df["abs_multiplication_acc_%"], marker='o', label="Multiplication acc", color="#e41a1c")
+    ax_forget.semilogx(df["lr"], df["abs_division_acc_%"], marker='s', label="Division acc", color="#ff7f00")
+    ax_forget.semilogx(df["lr"], df["abs_forget_acc_%"], marker='D', linestyle='--', label="Forget group avg", color="#7f0000")
+    ax_forget.set_title("Forget Set Accuracy Breakdown")
+    ax_forget.set_xlabel("Learning Rate (Log Scale)")
+    ax_forget.set_ylabel("Accuracy (%)")
+    ax_forget.grid(True, which="both", alpha=0.3)
+    ax_forget.legend()
+
+    ax_retain.semilogx(df["lr"], df["abs_addition_acc_%"], marker='o', label="Addition acc", color="#1b9e77")
+    ax_retain.semilogx(df["lr"], df["abs_subtraction_acc_%"], marker='s', label="Subtraction acc", color="#66a61e")
+    ax_retain.semilogx(df["lr"], df["abs_retain_acc_%"], marker='D', linestyle='--', label="Retain group avg", color="#0b775e")
+    ax_retain.set_title("Retain Set Accuracy Breakdown")
+    ax_retain.set_xlabel("Learning Rate (Log Scale)")
+    ax_retain.set_ylabel("Accuracy (%)")
+    ax_retain.grid(True, which="both", alpha=0.3)
+    ax_retain.legend()
+
+    plt.tight_layout()
+    plt.savefig(results_out_dir / f"sweep_group_breakdown_{base_setup_ids[0]}.pdf", bbox_inches='tight')
+
+    # Text summary in compact, comparable format
+    print("\n[*] Per-LR retain/forget summary:")
+    for _, row in df.iterrows():
+        print(
+            f"{row['lr']:.1e} "
+            f"Initial Retain: {row['initial_retain_acc']:.4f} \u2192 Final Retain: {row['final_retain_acc']:.4f} || "
+            f"Initial Forget: {row['initial_forget_acc']:.4f} \u2192 Final Forget: {row['final_forget_acc']:.4f}"
+        )
+
+    best_lr = float(best_abs_model["lr"])
+    print(f"\nThe best is {best_lr:.1e}.")
+
     # Save comprehensive CSV
-    df.to_csv(results_out_dir / f"unlearn_sweep_dual_mode_{base_setup_ids[0]}.csv", index=False)
+    df_out = df.copy()
+    # Round numeric outputs for readability, but keep learning rate exact.
+    numeric_cols = [c for c in df_out.select_dtypes(include=[np.number]).columns if c != "lr"]
+    df_out[numeric_cols] = df_out[numeric_cols].round(3)
+    df_out.to_csv(results_out_dir / f"unlearn_sweep_dual_mode_{base_setup_ids[0]}.csv", index=False)
     print(f"[+] Analysis complete. Two plots saved to: {results_out_dir}")
 
     return best_rel_model, best_abs_model
