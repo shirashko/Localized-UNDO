@@ -28,9 +28,9 @@ def download_dataset(dataset_id, subset_name, output_filename, split="train", ca
 
     try:
         if subset_name is None:
-            ds = load_dataset(dataset_id, split=split, streaming=True, cache_dir=cache_dir)
+            ds = load_dataset(dataset_id, split=split, streaming=True, cache_dir=cache_dir, trust_remote_code=True)
         else:
-            ds = load_dataset(dataset_id, name=subset_name, split=split, streaming=True, cache_dir=cache_dir)
+            ds = load_dataset(dataset_id, name=subset_name, split=split, streaming=True, cache_dir=cache_dir, trust_remote_code=True)
 
         total = ds.num_rows if hasattr(ds, "num_rows") and ds.num_rows is not None else None
         output_path = os.path.join(OUTPUT_DIR, output_filename)
@@ -90,7 +90,7 @@ def main():
             ("Magpie-Align/Magpie-Gemma2-Pro-534K-v0.1", None, "magpie-gemma2.jsonl"),
             ("Magpie-Align/Magpie-Pro-300K-Filtered", None, "magpie-filtered.jsonl"),
             ("Salesforce/wikitext", "wikitext-2-v1", "wikitext.jsonl"),
-            ("legacy-datasets/wikipedia", "20220301.en", "wikipedia.jsonl"),
+            ("wikimedia/wikipedia", "20231101.en", "wikipedia.jsonl"),
         ]
         for d_id, sub, out in wmdp_list:
             download_dataset(d_id, sub, out, max_rows=10_000_000)
