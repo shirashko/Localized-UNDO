@@ -75,7 +75,6 @@ shared_maxent_base_setpup = {
     "retain_files": BIO_RETAIN,
     "use_retain": True,
     "use_retain_kl": True,
-    "alpha": 0.99,
 }
 
 base_setups = {
@@ -91,7 +90,6 @@ base_setups = {
         "ga_gd": True,
         "rmu_layers": [10, 11, 12, 13, 14, 15],
         "end_layer": 15,
-        "alpha": 0.2,
         "c": 80,
     },
     "bio_MaxEnt": {
