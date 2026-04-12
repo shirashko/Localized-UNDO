@@ -166,13 +166,21 @@ def launch_worker(exp_id, all_configs):
         noise_type=config.get('noise_type', 'global'),
         shrink_perturb_repeat=config.get('shrink_perturb_repeat', False),
         noise_mask=noise_mask_tensor,
-        noise_config=config.get('noise_mask_dir_name', None)
+        noise_config=config.get('noise_mask_dir_name', None),
+        corruption_layer_scope=config.get('corruption_layer_scope'),
     )
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Partial Distillation sweep via YAML config.")
     parser.add_argument("--setup", type=str, required=True, help="Setup ID from the YAML file.")
+    parser.add_argument(
+        "--corruption-layer-scope",
+        type=str,
+        default=None,
+        choices=("attention_only", "mlp_only"),
+        help="Override YAML: only corrupt attention (self_attn) or MLP weights in do_corruption.",
+    )
     args = parser.parse_args()
 
     yaml_path = CONFIG_DIR / "arithmetic" / "partial_distill.yaml"
@@ -182,6 +190,10 @@ if __name__ == "__main__":
     except KeyError:
         print(f"❌ Error: Setup ID '{args.setup}' not found in {yaml_path}")
         sys.exit(1)
+
+    if args.corruption_layer_scope:
+        for cfg in all_experiments.values():
+            cfg["corruption_layer_scope"] = args.corruption_layer_scope
 
     print(f"🚀 Initializing Partial Distillation Sweep: {args.setup}")
     print(f"Total experiments: {len(all_experiments)}")

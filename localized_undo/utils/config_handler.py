@@ -75,18 +75,29 @@ def _validate_model_path(model_rel_path, model_v):
     return full_path
 
 
-def _extract_distill_metadata(model_dir_name, model_v, method, noise, beta):
-    """Extracts alpha and builds naming for distilled models."""
+def _extract_distill_metadata(
+    model_dir_name, model_v, method, noise, beta, predefined_distill_noise_label=None
+):
+    """Extracts alpha (if present) and builds naming for distilled models."""
     alpha_match = re.search(r"alpha_([\d\.]+)", model_dir_name)
-    if not alpha_match:
-        raise ValueError(f"Could not parse alpha from distilled model path: {model_dir_name}")
-
-    alpha = float(alpha_match.group(1))
-    distill_info = f"{model_v}_{method}_{noise}_a{alpha}_b{beta}"
+    if alpha_match:
+        alpha = float(alpha_match.group(1))
+        distill_info = f"{model_v}_{method}_{noise}_a{alpha}_b{beta}"
+        parent_noise = noise
+    elif "predefined-student" in model_dir_name:
+        # Student noise is not alpha/beta from this YAML; do not reuse noise_config here.
+        alpha = None
+        label = predefined_distill_noise_label or "predefined_student"
+        distill_info = f"{model_v}_{method}_{label}"
+        parent_noise = label
+    else:
+        raise ValueError(
+            f"Could not parse alpha or predefined-student distill from path: {model_dir_name}"
+        )
 
     return {
         'parent_method': method,
-        'parent_noise': noise,
+        'parent_noise': parent_noise,
         'parent_alpha': alpha,
         'wandb_run_name': f"RL_{distill_info}"
     }
@@ -137,6 +148,18 @@ def load_relearn_configs(yaml_path):
         for a in meta.get('alphas', [])
     ]
 
+    # e.g. skip_student_corruption distill:
+    #   ...-partial_distill-<student_dir_basename>-predefined-student-seed_<seed>
+    # or with mask:
+    #   ...-partial_distill-<student_dir_basename>-<noise_mask_dir_name>-predefined-student-seed_<seed>
+    for rel in meta.get('extra_distilled_models', []) or []:
+        rel = rel.strip()
+        if not rel:
+            continue
+        if rel in models_to_run:
+            continue
+        models_to_run.append(rel)
+
     if meta.get('include_baselines'):
         baselines = data.get('baselines_library', {}).get(model_v, [])
         models_to_run += (baselines or [])
@@ -162,7 +185,12 @@ def load_relearn_configs(yaml_path):
 
             if is_distilled:
                 meta_info = _extract_distill_metadata(
-                    model_dir_name, model_v, meta['method'], meta['noise_config'], meta['beta']
+                    model_dir_name,
+                    model_v,
+                    meta['method'],
+                    meta['noise_config'],
+                    meta['beta'],
+                    predefined_distill_noise_label=meta.get('predefined_distill_noise_label'),
                 )
             else:
                 meta_info = _extract_baseline_metadata(model_rel_path, model_v)
@@ -254,8 +282,24 @@ def load_distill_configs(yaml_path, setup_id):
                 # Experiment Identification & Naming
                 mask_config = f"{mask_name}" if mask_name else ""
                 if skip_student_corruption:
-                    exp_id = f"{setup_id}_{mask_config}_predefined-student_s{seed}"
-                    path_suffix = f"-{mask_config}-predefined-student-seed_{seed}"
+                    if custom_student_rel_path:
+                        student_slug = os.path.basename(
+                            os.path.normpath(custom_student_rel_path)
+                        )
+                    else:
+                        student_slug = "from_teacher"
+                    if mask_config:
+                        exp_id = (
+                            f"{setup_id}_{student_slug}_{mask_config}_predefined-student_s{seed}"
+                        )
+                        path_suffix = (
+                            f"-{student_slug}-{mask_config}-predefined-student-seed_{seed}"
+                        )
+                    else:
+                        exp_id = f"{setup_id}_{student_slug}_predefined-student_s{seed}"
+                        path_suffix = (
+                            f"-{student_slug}-predefined-student-seed_{seed}"
+                        )
                 else:
                     exp_id = f"{setup_id}_{mask_config}_a{float(alpha)}_b{float(beta)}_s{seed}"
                     path_suffix = f"-{mask_config}-alpha_{alpha}-beta_{beta}-seed_{seed}"

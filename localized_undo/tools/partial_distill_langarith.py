@@ -64,6 +64,7 @@ def partial_distill(
 
     noise_mask=None,
     noise_config=None,
+    corruption_layer_scope=None,
 ):
     """
     Distillation script using Accelerate. Replaces standard CE with forward KL (KL(teacher||student)).
@@ -135,7 +136,13 @@ def partial_distill(
     # ------------------------------------------------------------
     if noise_alpha != 0.0:
         print_acc(f"[serum_original.py] Applying one-time shrink+perturb: noise={noise_alpha}", print_message)
-        do_corruption(student_model, noise_alpha, noise_beta, noise_mask=noise_mask)
+        do_corruption(
+            student_model,
+            noise_alpha,
+            noise_beta,
+            noise_mask=noise_mask,
+            layer_scope=corruption_layer_scope,
+        )
 
 
 
@@ -260,7 +267,13 @@ def partial_distill(
 
         if shrink_perturb_repeat and noise_alpha != 0.0:
             print_acc(f"[serum_original.py] Re-applying shrink+perturb before epoch {epoch+1}", print_message)
-            do_corruption(student_model, noise_alpha, noise_beta, noise_mask=noise_mask)
+            do_corruption(
+                student_model,
+                noise_alpha,
+                noise_beta,
+                noise_mask=noise_mask,
+                layer_scope=corruption_layer_scope,
+            )
 
         student_model.train()
         micro_kd_sum = 0.0
@@ -388,7 +401,7 @@ def partial_distill(
 # The do_corruption function is used for "noise-and-decay"
 ##############################################################
 
-def do_corruption(model, noise_alpha, noise_beta=0.1, seed=42, noise_mask=None):
+def do_corruption(model, noise_alpha, noise_beta=0.1, seed=42, noise_mask=None, layer_scope=None):
     """
         Applies noise corruption to model parameters, optionally using a weight-level mask.
 
@@ -398,6 +411,9 @@ def do_corruption(model, noise_alpha, noise_beta=0.1, seed=42, noise_mask=None):
                 Final weight is calculated as: W_new = (1 - effective_alpha)*W_old + effective_alpha*Noise.
             noise_beta (float): Magnitude/Standard Deviation factor for the generated noise.
             seed (int): Seed for reproducible noise generation across different experimental runs.
+            layer_scope (str, optional): If set, only corrupt matching decoder blocks (LLaMA/Gemma-style
+                names: ``.self_attn.`` for attention, ``.mlp.`` for MLP). One of ``None`` (all parameters
+                allowed by the mask), ``"attention_only"``, or ``"mlp_only"``.
             noise_mask (dict, optional):
                 A dictionary defining a localized weight-level importance map.
 
@@ -416,6 +432,10 @@ def do_corruption(model, noise_alpha, noise_beta=0.1, seed=42, noise_mask=None):
         """
     assert 0 <= noise_alpha <= 1
     assert 0 <= noise_beta <= 1
+    if layer_scope is not None and layer_scope not in ("attention_only", "mlp_only"):
+        raise ValueError(
+            f"layer_scope must be None, 'attention_only', or 'mlp_only', got {layer_scope!r}"
+        )
 
     # Set seed for reproducible noise generation across different experiments
     torch.manual_seed(seed)
@@ -441,6 +461,9 @@ def do_corruption(model, noise_alpha, noise_beta=0.1, seed=42, noise_mask=None):
         print(f"[DEBUG] Mask Global Sparsity: {global_sparsity:.4%}")
         print(f"[DEBUG] Total weights affected by mask: {non_zero_elements} out of {total_elements}")
 
+    if layer_scope:
+        print(f"[DEBUG] corruption layer_scope={layer_scope!r} (only matching parameter names are corrupted)")
+
     # 2. Apply Corruption Loop
     for name, param in model.named_parameters():
         if not param.requires_grad:
@@ -452,6 +475,11 @@ def do_corruption(model, noise_alpha, noise_beta=0.1, seed=42, noise_mask=None):
         clean_name = name.replace("module.", "").replace("student_model.", "")
         if clean_name.startswith("model."):
             clean_name = clean_name[6:]
+
+        if layer_scope == "attention_only" and ".self_attn." not in clean_name:
+            continue
+        if layer_scope == "mlp_only" and ".mlp." not in clean_name:
+            continue
 
         # Determine if we should apply noise:
         is_in_mask = (normalized_mask is None) or (clean_name in normalized_mask)

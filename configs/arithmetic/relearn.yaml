@@ -20,12 +20,21 @@ default_config:
 experiment_metadata:
   model_version: "gemma-2-0.3B"
   method: "MaxEnt"
-  noise_config: "arithmetic_gemma-2-0.3B_p50_delta_mask_global"
+  # Used when sweeping alpha/beta distill runs; not used for naming predefined-student relearn.
+  noise_config: "" # "arithmetic_gemma-2-0.3B_p50_delta_mask_global"
+  # Optional: wandb/parent_noise label for extra_distilled_models predefined-student (default: predefined_student).
+  # predefined_distill_noise_label: "snmf_ablated_student"
   beta: 0.1
   distill_seed: 111
-  alphas: [0.55, 0.65, 0.7, 0.75]
+  # Predefined-distill only (upcoming run): alphas empty, baselines off, single path below.
+  # To also sweep alpha/beta distill checkpoints, set alphas: [0.55, ...] again.
+  alphas: []
+  # Relative to models/non-wmdp/ — same tree as .../partial_distill_models_arith/gemma-2-0.3B_MaxEnt-...
+  extra_distilled_models:
+    # Must match partial_distill output dir basename (includes ablated_models folder name as slug).
+    - "partial_distill_models_arith/gemma-2-0.3B_MaxEnt-arithmetic-partial_distill-gemma-2-0.3B_forget_ablated_pipeline_scale_3.5-predefined-student-seed_111"
   relearn_lrs: [ 1e-3, 7e-4, 4e-4, 1e-4, 7e-5, 5e-5, 1e-5, 7e-6, 4e-6, 1e-6 ]
-  include_baselines: true
+  include_baselines: false
   first_train_file: "pretrain/train_multiplication_division.jsonl"
   second_train_file: null
   interleave_probs: [ 1.0 ]
