@@ -1,7 +1,7 @@
 default_config:
   seed: 42
-  batch_size: 3
-  gradient_accumulation_steps: 120
+  batch_size: 1
+  gradient_accumulation_steps: 360
   epochs: 1
   learning_rate: 0.0007
   max_steps: 1000
@@ -50,8 +50,9 @@ setups:
     method: "MaxEnt"
     # Pointing to the final_model from the Unlearning stage - use the best model from the select_unlearn_model.py script
     teacher_rel_path: "unlearned_models/MaxEnt/pretrained_models_gemma-2-0.3B_all_arithmetic+eng_final_model_lr_1.0e-04/final_model"
-    student_rel_path: "ablated_models/gemma-2-0.3B_snmf_ablated"
-    skip_student_corruption: true
+    student_rel_path: "ablated_models/gemma-2-0.3B_forget_ablated_pipeline_scale_3.5"
+    # skip_student_corruption: true
+    corruption_layer_scope: "attention_only"
     wandb_project: "arithmetic_distillation"
     # noise_type: "random" # Options: "global" or "delta-mask"
     # noise_mask_dir_name: "arithmetic_gemma-2-0.3B_p50_random_global"

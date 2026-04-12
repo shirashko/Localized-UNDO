@@ -6,7 +6,7 @@
 #SBATCH --error=logs/relearn_%j.err
 #SBATCH --time=24:00:00
 #SBATCH --partition=studentkillable
-#SBATCH --gres=gpu:geforce_rtx_2080:3
+#SBATCH --gres=gpu:geforce_rtx_2080:1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=80G
 
