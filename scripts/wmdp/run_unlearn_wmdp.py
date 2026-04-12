@@ -34,14 +34,16 @@ BASE_SETUPS = [
 custom_login()
 
 MODEL = f"{WMDP_MODEL_DIR}/gemma-2-2b"
-BIO_FORGET = f"{DATASET_DIR}/pretrain/train_wmdp-bio_remove_dataset_qa.jsonl"
+
+DATASET_DIR = f"{DATASET_DIR}/pretrain"
+BIO_FORGET = f"{DATASET_DIR}/train_wmdp-bio_remove_dataset_qa.jsonl"
 BIO_RETAIN = [
-    f"{DATASET_DIR}/pretrain/train_wmdp-bio_retain_dataset_qa.jsonl",
-    f"{DATASET_DIR}/pretrain/train_wikitext.jsonl",
+    f"{DATASET_DIR}/train_wmdp-bio_retain_dataset_qa.jsonl",
+    f"{DATASET_DIR}/train_wikitext.jsonl",
 ]
 BIO_RMU_RETAIN = [
-    f"{DATASET_DIR}/pretrain/train_wikitext.jsonl",
-    f"{DATASET_DIR}/pretrain/train_wmdp-bio_retain_dataset_qa.jsonl",
+    f"{DATASET_DIR}/train_wikitext.jsonl",
+    f"{DATASET_DIR}/train_wmdp-bio_retain_dataset_qa.jsonl",
 ]
 
 shared_base_setups = {
@@ -68,6 +70,14 @@ shared_base_setups = {
     "use_local_record": True,
 }
 
+shared_maxent_base_setpup = {
+    **shared_base_setups,
+    "retain_files": BIO_RETAIN,
+    "use_retain": True,
+    "use_retain_kl": True,
+    "alpha": 0.99,
+}
+
 base_setups = {
     "bio_RMU": {
         **shared_base_setups,
@@ -85,44 +95,32 @@ base_setups = {
         "c": 80,
     },
     "bio_MaxEnt": {
-        **shared_base_setups,
-        "retain_files": BIO_RETAIN,
+        **shared_maxent_base_setpup,
         "output_dir": f"{WMDP_MODEL_DIR}/unlearned_models/MaxEnt/bio_TBD",
         "path_local_record": f"{WMDP_MODEL_DIR}/local_records/unlearned_models/MaxEnt/bio_TBD.txt",
         "wandb_project": "bio_unlearn_MaxEnt",
         "batch_size": 4,
         "gradient_accumulation_steps": 10,
-        "use_retain": True,
-        "use_retain_kl": True,
-        "alpha": 0.99,
         "use_repnoise": False,
         "use_sam": False,
     },
     "bio_repnoise": {
-        **shared_base_setups,
-        "retain_files": BIO_RETAIN,
+        **shared_maxent_base_setpup,
         "output_dir": f"{WMDP_MODEL_DIR}/unlearned_models/MaxEnt-repnoise/bio_TBD",
         "path_local_record": f"{WMDP_MODEL_DIR}/local_records/unlearned_models/MaxEnt-repnoise/bio_TBD.txt",
         "wandb_project": "bio_unlearn_MaxEnt-repnoise",
         "batch_size": 1,
         "gradient_accumulation_steps": 40,
-        "use_retain": True,
-        "use_retain_kl": True,
-        "alpha": 0.99,
         "use_repnoise": True,
         "use_sam": False,
     },
     "bio_SAM": {
-        **shared_base_setups,
-        "retain_files": BIO_RETAIN,
+        **shared_maxent_base_setpup,
         "output_dir": f"{WMDP_MODEL_DIR}/unlearned_models/MaxEnt-SAM-kl/bio_TBD",
         "path_local_record": f"{WMDP_MODEL_DIR}/local_records/unlearned_models/MaxEnt-SAM-kl/bio_TBD.txt",
         "wandb_project": "bio_unlearn_MaxEnt-SAM",
         "batch_size": 4,
         "gradient_accumulation_steps": 10,
-        "use_retain": True,
-        "use_retain_kl": True,
-        "alpha": 0.99,
         "use_repnoise": False,
         "use_sam": True,
     },
