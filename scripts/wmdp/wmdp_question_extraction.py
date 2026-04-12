@@ -172,11 +172,22 @@ def load_filtered_jsonl(
     return Dataset.from_list(filtered_data)
 
 
+def resolve_corpus_jsonl(corpus: Corpus) -> Path:
+    """Prefer ``datasets/wmdp/<corpus>.jsonl``, else ``datasets/fineweb/<corpus>.jsonl``."""
+    wmdp_path = DATASET_DIR / f"wmdp/{corpus}.jsonl"
+    fineweb_path = DATASET_DIR / f"fineweb/{corpus}.jsonl"
+    if wmdp_path.exists():
+        return wmdp_path
+    if fineweb_path.exists():
+        return fineweb_path
+    raise FileNotFoundError(f"Could not find {corpus}.jsonl in wmdp or fineweb")
+
+
 def check_lens():
     tkn = AutoTokenizer.from_pretrained('google/gemma-2-2b')
     results: dict[Corpus, ndarray[int, float]] = {}
     for corpus in corpuses:
-        ds = load_filtered_jsonl(f'{DATASET_DIR}/wmdp/{corpus}.jsonl', 0, math.inf)  # Load from local JSONL
+        ds = load_filtered_jsonl(resolve_corpus_jsonl(corpus), 0, math.inf)  # Load from local JSONL
         ds = ds.map(lambda x: {"len": [len(s) for s in tkn(x["text"])['input_ids']]}, batched=True, num_proc=NUM_PROC)
         
         results[corpus] = np.percentile(np.array(ds["len"]), np.array([50, 75, 90, 95, 99]))
@@ -289,8 +300,10 @@ def run(
     corpus: Corpus, *, batch_size: int, start_idx: int, end_idx: int, limiter: AsyncLimiter, suitability_threshold: float
 ):
     tkn = AutoTokenizer.from_pretrained('google/gemma-2-2b')
-    ds = load_filtered_jsonl(f'{DATASET_DIR}/wmdp/{corpus}.jsonl', start_idx, end_idx, tkn, 200
-    , 5000)
+
+    ds = load_filtered_jsonl(
+        resolve_corpus_jsonl(corpus), start_idx, end_idx, tkn, 200, 5000
+    )
 
     if PROMPT_TYPE == 'cyber':
         suitability_map = mk_suitability_map(corpus)
@@ -335,7 +348,9 @@ def suitability_histogram():
 
 def filter_passages(corpus: Corpus, *, batch_size: int, start_idx: int, end_idx: int, limiter: AsyncLimiter):
     tkn = AutoTokenizer.from_pretrained('google/gemma-2-2b')
-    ds = load_filtered_jsonl(f'{DATASET_DIR}/wmdp/{corpus}.jsonl', start_idx, end_idx, tkn, 200, 5000)
+    ds = load_filtered_jsonl(
+        resolve_corpus_jsonl(corpus), start_idx, end_idx, tkn, 200, 5000
+    )
 
     client = mk_gemini_client()
     records: list[CorporaSingle] = ds.to_list()
@@ -417,13 +432,38 @@ def concat_jsons(corpus):
 
 
 if __name__ == '__main__':
+    limiter = AsyncLimiter(max_rate=10, time_period=60) # 10 requests per minute
 
-    # concat_jsons('wmdp-bio_remove_dataset')
-    # concat_jsons('wmdp-bio_retain_dataset')
-    concat_jsons('wmdp-wikipedia')
-    # custom_login()
-    # step = 500
-    # for dataset in ['wikipedia']: # ['bio_retain_dataset', 'bio_remove_dataset']:
-    #     for i in range(0, 10000, step):
-    #         limiter = AsyncLimiter(max_rate=3, time_period=1)
-    #         run(corpus = dataset, batch_size=step, start_idx=i, end_idx=i+step, limiter=limiter, suitability_threshold=None)
+    # The corpora to process. We want to create three datasets: bio_remove_dataset, bio_retain_dataset, and wikipedia.
+    datasets_to_process = ['wikipedia'] # 'bio_remove_dataset', 'bio_retain_dataset'
+    
+    # We want to process 500 lines of each dataset, in batches of 50 lines.
+    step = 50 
+    total_lines_to_process = 500 
+
+    for dataset in datasets_to_process:
+        logger.info(f"Starting generation for corpus: {dataset}")
+        
+        for i in range(0, total_lines_to_process, step):
+            logger.info(f"Processing range {i} to {i+step} for {dataset}...")
+            
+            try:
+                # Run the generation
+                run(
+                    corpus=dataset, 
+                    batch_size=step, 
+                    start_idx=i, 
+                    end_idx=i+step, 
+                    limiter=limiter, 
+                    suitability_threshold=None
+                )
+            except Exception as e:
+                logger.error(f"Error in batch {i}-{i+step}: {e}")
+                # Continue to the next batch instead of crashing
+                continue
+
+        # After we have processed all the batches of a given corpus, we concatenate them into a single file.
+        logger.info(f"Finishing and concatenating results for {dataset}...")
+        concat_jsons(f"wmdp-{dataset}")
+
+    logger.info("All tasks completed successfully.")
