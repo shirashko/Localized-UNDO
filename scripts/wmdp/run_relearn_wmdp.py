@@ -3,7 +3,7 @@ from src.tools.relearn_wmdp import relearn
 from src.utils.paths import CACHE_DIR, DATASET_DIR, WMDP_MODEL_DIR
 from accelerate import Accelerator
 from utils.loss_functions import custom_login
-from src.utils.validation_functions import get_wmdp_cyber_eval_fn, get_wmdp_bio_eval_fn, get_both_wmdp_eval_fn, get_loss_eval_fn
+from src.utils.validation_functions import get_wmdp_bio_eval_fn, get_both_wmdp_eval_fn, get_loss_eval_fn
 from utils.parallel_launch import launch_in_parallel_one_per_gpu, get_parallel_launch_wrapper
 
 FINAL_RUN = True
@@ -91,70 +91,47 @@ DATA_TO_RUN = {
 
 custom_login()
 
+shared_setup = {
+    'model_name': f"{WMDP_MODEL_DIR}/PATH",
+    'train_files': [],
+    'interleave_probs': [],
+    'stopping_strategy': 'all_exhausted',
+    'cache_dir': CACHE_DIR,
+    'join_or_subsequence': True,
+    'seed': 42,
+    'device': "cuda",
+    'batch_size': 20,
+    'gradient_accumulation_steps': 1,
+    'epochs': 5,
+    'learning_rate': 'LR',
+    'max_steps': 500,
+    'num_warmup_steps': 1,
+    'validation_steps': [10, 25, 50, 150, 500],
+    'save_checkpoint_steps': 999,
+    'scheduler_type': "cosine",
+    'min_lr': 'LR',
+    'weight_decay': 0.0,
+    'gradient_clipping_threshold': 1.0,
+    'max_length': 256,
+    'use_wandb': True,
+    'wandb_project': "relearn_CORPUS",
+    'wandb_run_name': 'TBD',
+    'use_local_record': True,
+    'save_models': False,
+}
+
 setups = {
     "wmdp": {
-        'model_name'       : f"{WMDP_MODEL_DIR}/PATH",
-        'train_files'   : [],
-        'interleave_probs': [],
-        'stopping_strategy': 'all_exhausted',
-        'output_dir'       : f"{WMDP_MODEL_DIR}/relearned_models/TBD",
-        'cache_dir'        : CACHE_DIR,
-        'join_or_subsequence'         : True,
-        'seed'                        : 42,
-        'device'                      : "cuda",
-        'batch_size'                  : 20,
-        'gradient_accumulation_steps' : 1,
-        'epochs'                      : 5,
-        'learning_rate'               : 'LR',
-        'max_steps'                   : 500,
-        'num_warmup_steps'            : 1,
-        'validation_steps'            : [10, 25, 50, 150, 500],
-        'save_checkpoint_steps'       : 999,
-        'scheduler_type'              : "cosine",
-        'min_lr'                      : 'LR',
-        'weight_decay'                : 0.0,
-        'gradient_clipping_threshold' : 1.0,
-        'max_length'                  : 256,
-
-        'use_wandb'        : True,
-        'wandb_project'    : "relearn_CORPUS",
-        'wandb_run_name'   : 'TBD',
-        'use_local_record' : True,
+        **shared_setup,
+        'output_dir': f"{WMDP_MODEL_DIR}/relearned_models/TBD",
         'path_local_record': f"{WMDP_MODEL_DIR}/local_records/relearned_models/TBD.txt",
-        'save_models'      : False,
-        'shrink_perturb_relearning' : 0
+        'shrink_perturb_relearning': 0,
     },
     "wmdp-shrink-perturb": {
-        'model_name'       : f"{WMDP_MODEL_DIR}/PATH",
-        'train_files'   : [],
-        'interleave_probs': [],
-        'stopping_strategy': 'all_exhausted',
-        'output_dir'       : f"{WMDP_MODEL_DIR}/relearned_models/sp-TBD",
-        'cache_dir'        : CACHE_DIR,
-        'join_or_subsequence'         : True,
-        'seed'                        : 42,
-        'device'                      : "cuda",
-        'batch_size'                  : 20,
-        'gradient_accumulation_steps' : 1,
-        'epochs'                      : 5,
-        'learning_rate'               : 'LR',
-        'max_steps'                   : 500,
-        'num_warmup_steps'            : 1,
-        'validation_steps'            : [10, 25, 50, 150, 500],
-        'save_checkpoint_steps'       : 999,
-        'scheduler_type'              : "cosine",
-        'min_lr'                      : 'LR',
-        'weight_decay'                : 0.0,
-        'gradient_clipping_threshold' : 1.0,
-        'max_length'                  : 256,
-
-        'use_wandb'        : True,
-        'wandb_project'    : "relearn_CORPUS",
-        'wandb_run_name'   : 'TBD',
-        'use_local_record' : True,
+        **shared_setup,
+        'output_dir': f"{WMDP_MODEL_DIR}/relearned_models/sp-TBD",
         'path_local_record': f"{WMDP_MODEL_DIR}/local_records/relearned_models/sp-TBD.txt",
-        'save_models'      : False,
-        'shrink_perturb_relearning' : .05
+        'shrink_perturb_relearning': .05,
     },
 }
 
@@ -198,12 +175,7 @@ def launch_relearn(setup_id, lr, model, files, seed, eval_on_loss):
         eval_fn = get_loss_eval_fn(
             accelerator=accelerator,
         )
-    elif 'cyber' in name.lower():
-        assert 'bio' not in name.lower()
-        current_setup['wandb_project'] = current_setup['wandb_project'].replace('CORPUS', 'cyber')
-        eval_fn = get_wmdp_cyber_eval_fn(accelerator, large_eval=FINAL_RUN, no_mmlu=not 'initial' in file_name)
     elif 'bio' in name.lower():
-        assert 'cyber' not in name.lower()
         current_setup['wandb_project'] = current_setup['wandb_project'].replace('CORPUS', 'bio')
         eval_fn = get_wmdp_bio_eval_fn(accelerator, large_eval=FINAL_RUN, no_mmlu=not 'initial' in file_name)
     else:
@@ -258,15 +230,11 @@ if __name__ == "__main__":
             for model_name, model_path in MODELS_TO_RUN.items():
                 for data_name, (files, probs, lrs) in DATA_TO_RUN.items():
                     for lr in lrs:
-                        domain_in_model = "bio" in model_name.lower() or "cyber" in model_name.lower()
+                        domain_in_model = "bio" in model_name.lower()
                         if not domain_in_model:
                             data_model_match = True
                         else:
-                            data_model_match = (
-                                "bio" in data_name and "bio" in model_name
-                            ) or (
-                                "cyber" in data_name and "cyber" in model_name
-                            )
+                            data_model_match = "bio" in data_name and "bio" in model_name
                         if data_model_match:
                             experiments.append((setup_id, lr, (model_name, model_path), (data_name, (files, probs)), seed, eval_on_loss))
                         else:
