@@ -1,12 +1,26 @@
 #!/bin/bash
-# Tokenize raw / QA JSONLs into datasets/pretrain/ via prepare.py.
-#
-# Slurm:  sbatch scripts/wmdp/sbatch_prepare.sh
-# Local:  bash scripts/wmdp/run_prepare.sh   (from repo root)
-#
-# Requires: tokens/hf_token.txt
+
+# --- Slurm Configuration ---
+#SBATCH --job-name=prepare_data
+#SBATCH --output=logs/prepare_data_%j.out
+#SBATCH --error=logs/prepare_data_%j.err
+#SBATCH --time=24:00:00
+#SBATCH --partition=studentkillable
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=64G
+
+# --- Email Notifications ---
+#SBATCH --mail-user=rashkovits@mail.tau.ac.il
+#SBATCH --mail-type=BEGIN,END,FAIL
 
 set -euo pipefail
+
+# --- Environment Setup ---
+# Align with other Slurm scripts so cluster-level conda init is loaded.
+if [ -f "$HOME/.bashrc" ]; then
+  # shellcheck source=/dev/null
+  source "$HOME/.bashrc"
+fi
 
 _conda_base="${CONDA_ROOT:-}"
 if [ -z "$_conda_base" ] || [ ! -f "$_conda_base/etc/profile.d/conda.sh" ]; then
@@ -28,13 +42,16 @@ fi
 # shellcheck source=/dev/null
 . "$_conda_base/etc/profile.d/conda.sh"
 unset _conda_base
-conda activate undo
+CONDA_ENV_NAME="${CONDA_ENV_NAME:-undo}"
+conda activate "$CONDA_ENV_NAME"
 
+# --- Project Setup ---
 REPO_ROOT="/home/morg/students/rashkovits/Localized-UNDO"
 cd "$REPO_ROOT"
 export PYTHONPATH="${PYTHONPATH:+${PYTHONPATH}:}$(pwd)"
 mkdir -p logs
 
+# --- Execute Prepare ---
 echo "--------------------------------------------------------"
 echo "prepare.py — build datasets/pretrain/"
 echo "Node: ${SLURMD_NODENAME:-local}"
