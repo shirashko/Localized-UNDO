@@ -30,6 +30,10 @@ print(f"NUM_PROCESSES = {NUM_PROCESSES}", flush=True)
 TRAIN_TARGET = 1_000_000_000
 VALID_TARGET = 500_000
 
+LOG_LEVEL = os.environ.get("PREPARE_LOG_LEVEL", "info").lower()
+DOC_PROGRESS_EVERY = int(os.environ.get("PREPARE_DOC_PROGRESS_EVERY", "10000"))
+MISSING_FIELD_SAMPLE_LIMIT = int(os.environ.get("PREPARE_MISSING_FIELD_SAMPLE_LIMIT", "2"))
+
 KOR_FILE = DATASET_DIR / "fineweb/fineweb2_kor.jsonl"
 ENG_FILE = DATASET_DIR / "fineweb/fineweb_eng_sample-10BT.jsonl"
 OUT_DIR = DATASET_DIR / "pretrain"
@@ -51,6 +55,16 @@ with open(token_file, "r") as f:
 tokenizer = AutoTokenizer.from_pretrained('google/gemma-2-2b', token=my_hf_token)
 
 
+def _log_info(msg):
+    if LOG_LEVEL in {"info", "debug"}:
+        print(msg, flush=True)
+
+
+def _log_debug(msg):
+    if LOG_LEVEL == "debug":
+        print(msg, flush=True)
+
+
 def tokenize_lines(lines, doc_max_len, use_one_per_line):
     """
     Tokenizes a list of JSON lines.
@@ -58,6 +72,8 @@ def tokenize_lines(lines, doc_max_len, use_one_per_line):
     """
     results = []
     total = 0
+    missing_field_count = 0
+    missing_field_samples = []
     for line in lines:
         try:
             record = json.loads(line)
@@ -91,7 +107,9 @@ def tokenize_lines(lines, doc_max_len, use_one_per_line):
                 loss_mask = [0] * len(encoded_q['input_ids']) + [1] * len(encoded_a['input_ids'])
 
             else:
-                print(f"Did not find response/text/output or question+answer field in the following: {line}")
+                missing_field_count += 1
+                if len(missing_field_samples) < MISSING_FIELD_SAMPLE_LIMIT:
+                    missing_field_samples.append(line.strip()[:200])
                 continue
 
         if use_one_per_line:
@@ -109,7 +127,15 @@ def tokenize_lines(lines, doc_max_len, use_one_per_line):
                     continue
                 results.append((chunk_inp, chunk_att, chuck_loss_mask))
 
-    print(f"PERCENT LINES KEPT = {len(results) / (len(lines) * 1.0)}")
+    if lines:
+        _log_debug(f"PERCENT LINES KEPT = {len(results) / (len(lines) * 1.0):.4f}")
+    if missing_field_count:
+        _log_info(
+            f"Skipped {missing_field_count} lines with missing text/response/output/qa fields in this subchunk."
+        )
+        if LOG_LEVEL == "debug":
+            for sample in missing_field_samples:
+                _log_debug(f"  sample_bad_line: {sample}")
     return results
 
 
@@ -163,24 +189,24 @@ def build_and_save_dataset(
                 break
 
             subchunks = split_into_subchunks(lines_chunk, subchunk_size)
-            print(f" -> Split into {len(subchunks)} subchunks (size ~{subchunk_size}).", flush=True)
+            _log_debug(f" -> Split into {len(subchunks)} subchunks (size ~{subchunk_size}).")
 
             # Map each subchunk in parallel
             # returns an iterator of lists-of-tuples
             tokenize_with_max_len = partial(tokenize_lines, doc_max_len=doc_max_len, use_one_per_line=use_one_per_line)
 
-            print(" -> Launching parallel tasks for subchunks...", flush=True)
+            _log_debug(" -> Launching parallel tasks for subchunks...")
             results_iter = pool.imap(tokenize_with_max_len, subchunks, chunksize=1)
 
             subchunk_id = 0
             for tokenized_sublist in results_iter:
                 subchunk_id += 1
                 if tokenized_sublist is None:
-                    print(f"    Subchunk {subchunk_id}: None result??", flush=True)
+                    _log_debug(f"    Subchunk {subchunk_id}: None result??")
                     continue
 
                 valid_docs = sum(1 for tok in tokenized_sublist if tok is not None)
-                print(f"    Subchunk {subchunk_id}: {valid_docs} valid docs tokenized.", flush=True)
+                _log_debug(f"    Subchunk {subchunk_id}: {valid_docs} valid docs tokenized.")
 
                 # process each doc
                 for doc_idx, tok in enumerate(tokenized_sublist):
@@ -249,11 +275,10 @@ def build_and_save_dataset(
                         }
                         fout_train.write(json.dumps(record, ensure_ascii=False) + "\n")
 
-                    # Print status every 100 docs
-                    if (doc_idx + 1) % 100 == 0:
-                        print(
-                            f"      Processed doc {doc_idx + 1}/{len(tokenized_sublist)} in subchunk {subchunk_id}. T: {train_so_far}, V: {valid_so_far}",
-                            flush=True)
+                    if DOC_PROGRESS_EVERY > 0 and (doc_idx + 1) % DOC_PROGRESS_EVERY == 0:
+                        _log_info(
+                            f"      Processed doc {doc_idx + 1}/{len(tokenized_sublist)} in subchunk {subchunk_id}. T: {train_so_far}, V: {valid_so_far}"
+                        )
 
                     if train_so_far >= train_target and valid_so_far >= valid_target:
                         print("**Both targets reached** => breaking out of doc loop", flush=True)
