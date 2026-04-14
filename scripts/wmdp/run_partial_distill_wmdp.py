@@ -2,7 +2,7 @@ from accelerate import Accelerator
 from localized_undo.tools.partial_distill_wmdp import partial_distill
 from localized_undo.utils.paths import CACHE_DIR, DATASET_DIR, WMDP_MODEL_DIR
 from localized_undo.utils.loss_functions import custom_login
-from localized_undo.utils.validation_functions import get_wmdp_cyber_eval_fn, get_wmdp_bio_eval_fn, get_both_wmdp_eval_fn
+from localized_undo.utils.validation_functions import get_wmdp_bio_eval_fn
 from localized_undo.utils.parallel_launch import launch_in_parallel_one_per_gpu, get_parallel_launch_wrapper
 
 SETUPS_TO_RUN = ["basic"]
@@ -10,10 +10,7 @@ SETUPS_TO_RUN = ["basic"]
 MODELS = {
     'bio_rmu': f'{WMDP_MODEL_DIR}/saved_unlearned_models/RMU/bio_lr_5.00e-05_alpha_0.50_seed_SEED/final_model',
     'bio_maxent': f'{WMDP_MODEL_DIR}/saved_unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.30_seed_SEED/final_model',
-    'cyber_rmu': f'{WMDP_MODEL_DIR}/saved_unlearned_models/RMU/cyber_lr_2.00e-05_alpha_0.50_seed_SEED/final_model', 
-    'cyber_maxent': f'{WMDP_MODEL_DIR}/saved_unlearned_models/MaxEnt/cyber_lr_2.00e-05_alpha_0.20_seed_SEED/final_model', 
     # 'base': f'{WMDP_MODEL_DIR}/gemma-2-2b'
-    # 'cyber_maxent_and_rmu': (f'{WMDP_MODEL_DIR}/saved_unlearned_models/RMU/cyber_lr_2.00e-05_alpha_0.50_seed_SEED/final_model', f'{WMDP_MODEL_DIR}/saved_unlearned_models/MaxEnt/cyber_lr_2.00e-05_alpha_0.20_seed_SEED/final_model')
 }
 SEEDS = [60]
 SWEEP_LRS = [2e-5]
@@ -143,54 +140,6 @@ setups = {
         base_teacher_name='google/gemma-2-2b',
         use_base_teacher_percent='TBD',
     ),
-    "gemma-2-base-cyber": make_setup(
-        teacher_model_name=f"{WMDP_MODEL_DIR}/gemma-2-2b",
-        student_model_name=f"{WMDP_MODEL_DIR}/gemma-2-2b",
-        train_files=[
-            f"{DATASET_DIR}/pretrain/train_eng.jsonl",
-            f"{DATASET_DIR}/pretrain/train_cyber-forget-corpus.jsonl",
-            f"{DATASET_DIR}/pretrain/train_cyber-retain-corpus.jsonl",
-            f"{DATASET_DIR}/pretrain/train_magpie.jsonl",
-        ],
-        output_dir=f"{WMDP_MODEL_DIR}/distilled_partial_distill_models/base/cyber-25-lr",
-        seed=42,
-        batch_size=22,
-        gradient_accumulation_steps=20,
-        max_steps=10000,
-        save_checkpoint_steps=2000,
-        max_length=256,
-        noise_alpha=0.25,
-        wandb_project="wmdp-cyber-partial_distill-base",
-        path_local_record=f"{WMDP_MODEL_DIR}/local_records/partial_distill_models/base/cyber-25-lr.txt",
-    ),
-    "gemma-2-rmu-cyber": make_setup(
-        teacher_model_name=f"{WMDP_MODEL_DIR}/unlearned_models/saved/cyber_qa_lr_5.0e-05_alpha_2.0000e-01",
-        student_model_name=f"{WMDP_MODEL_DIR}/unlearned_models/saved/cyber_qa_lr_5.0e-05_alpha_2.0000e-01",
-        output_dir=f"{WMDP_MODEL_DIR}/distilled_partial_distill_models/rmu/cyber-25-lr",
-        seed=42,
-        batch_size=44,
-        gradient_accumulation_steps=10,
-        max_steps=10000,
-        save_checkpoint_steps=2000,
-        max_length=256,
-        noise_alpha=0.25,
-        wandb_project="wmdp-cyber-partial_distill-rmu",
-        path_local_record=f"{WMDP_MODEL_DIR}/local_records/partial_distill_models/rmu/cyber-25-lr.txt",
-    ),
-    "gemma-2-max-ent-cyber": make_setup(
-        teacher_model_name=f"{WMDP_MODEL_DIR}/unlearned_models/saved/max_ent_cyber_lr_2.0e-05_alpha_1.5000e-01",
-        student_model_name=f"{WMDP_MODEL_DIR}/unlearned_models/saved/max_ent_cyber_lr_2.0e-05_alpha_1.5000e-01",
-        output_dir=f"{WMDP_MODEL_DIR}/distilled_partial_distill_models/max_ent/cyber-25-lr",
-        seed=42,
-        batch_size=44,
-        gradient_accumulation_steps=10,
-        max_steps=10000,
-        save_checkpoint_steps=2000,
-        max_length=256,
-        noise_alpha=0.25,
-        wandb_project="wmdp-cyber-partial_distill-max-ent",
-        path_local_record=f"{WMDP_MODEL_DIR}/local_records/partial_distill_models/max_ent/cyber-25-lr.txt",
-    ),
 }
 
 def wmdp_stop_cond_fn(student_eval_dict, teacher_eval_dict):
@@ -227,15 +176,8 @@ def run_experiment(setup_id, lr, train_files, model, seed, base_teacher_percent,
     
     accelerator = Accelerator()
 
-    if 'cyber' in model_name:
-        datatype = 'cyber'
-        eval_fn = get_wmdp_cyber_eval_fn(accelerator, large_eval=FINAL_RUN)
-    elif 'bio' in model_name:
-        datatype = 'bio'
-        eval_fn = get_wmdp_bio_eval_fn(accelerator, large_eval=FINAL_RUN)
-    else:
-        datatype = 'both'
-        eval_fn = get_both_wmdp_eval_fn(accelerator, large_eval=FINAL_RUN)
+    datatype = 'bio'
+    eval_fn = get_wmdp_bio_eval_fn(accelerator, large_eval=FINAL_RUN)
    
 
     current_setup['learning_rate'] = lr
