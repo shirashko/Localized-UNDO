@@ -1,5 +1,6 @@
 import yaml
-from localized_undo.utils.paths import MODEL_DIR, DATASET_DIR, CACHE_DIR, PROJECT_ROOT, WMDP_MODEL_DIR
+from localized_undo.utils.paths import MODEL_DIR, DATASET_DIR, CACHE_DIR, PROJECT_ROOT
+import hashlib
 import os
 import re
 import json
@@ -120,9 +121,24 @@ def _extract_baseline_metadata(model_rel_path, model_v):
     }
 
 
-def _build_relearn_paths(config, setup_id, model_dir_name, lr_val):
+def _relearn_experiment_slug(model_rel_path: str) -> str:
+    """
+    Stable filesystem / experiment id segment from the full path under MODEL_DIR.
+    Distinct rel paths never collide (unlike basename-only, which can repeat in different folders).
+    """
+    rel = model_rel_path.strip().replace("\\", "/").lstrip("./")
+    slug = rel.replace("/", "__")
+    max_len = 220
+    if len(slug) <= max_len:
+        return slug
+    digest = hashlib.sha256(rel.encode("utf-8")).hexdigest()[:16]
+    base = os.path.basename(rel) or "model"
+    return f"{base[:100]}__{digest}"
+
+
+def _build_relearn_paths(config, setup_id, experiment_slug, lr_val):
     """Constructs output and local record paths."""
-    exp_label = f"relearned_{model_dir_name}_{lr_val:.1e}"
+    exp_label = f"relearned_{experiment_slug}_{lr_val:.1e}"
     config['output_dir'] = str(MODEL_DIR / "relearned_models" / setup_id / exp_label)
     config['path_local_record'] = str(
         MODEL_DIR / "local_records/relearned_models" / setup_id / f"{exp_label}.txt"
@@ -169,6 +185,7 @@ def load_relearn_configs(yaml_path):
     for model_rel_path in models_to_run:
         full_model_path = _validate_model_path(model_rel_path, model_v)
         model_dir_name = os.path.basename(model_rel_path)
+        experiment_slug = _relearn_experiment_slug(model_rel_path)
         is_distilled = "partial_distill_models_arith" in model_rel_path
 
         for lr in relearn_lrs:
@@ -192,6 +209,10 @@ def load_relearn_configs(yaml_path):
                     meta['beta'],
                     predefined_distill_noise_label=meta.get('predefined_distill_noise_label'),
                 )
+                # Predefined-student distill_info is identical for all such runs; include checkpoint dir name.
+                meta_info['wandb_run_name'] = (
+                    f"{meta_info['wandb_run_name']}__{model_dir_name}"
+                )
             else:
                 meta_info = _extract_baseline_metadata(model_rel_path, model_v)
 
@@ -199,9 +220,9 @@ def load_relearn_configs(yaml_path):
             config.update(meta_info)
 
             setup_id = f"{model_v}_train_only_forget"
-            config = _build_relearn_paths(config, setup_id, model_dir_name, lr_val)
+            config = _build_relearn_paths(config, setup_id, experiment_slug, lr_val)
 
-            unique_id = f"{setup_id}_{model_dir_name}_lr{lr_val}"
+            unique_id = f"{setup_id}_{experiment_slug}_lr{lr_val}"
             expanded_experiments[unique_id] = config
 
     print(f"✅ Successfully loaded {len(expanded_experiments)} unique experiments for {model_v}.")
@@ -230,6 +251,13 @@ def load_distill_configs(yaml_path, setup_id):
     skip_student_corruption = base_template.get('skip_student_corruption', None)
     if skip_student_corruption is None:
         skip_student_corruption = custom_student_rel_path is not None
+
+    _cls = base_template.get("corruption_layer_scope")
+    if _cls is not None and _cls not in ("attention_only", "mlp_only"):
+        raise ValueError(
+            "corruption_layer_scope must be null, 'attention_only', or 'mlp_only'; "
+            f"got {_cls!r}"
+        )
 
     if skip_student_corruption:
         alpha_values = [0.0]
@@ -301,8 +329,40 @@ def load_distill_configs(yaml_path, setup_id):
                             f"-{student_slug}-predefined-student-seed_{seed}"
                         )
                 else:
-                    exp_id = f"{setup_id}_{mask_config}_a{float(alpha)}_b{float(beta)}_s{seed}"
-                    path_suffix = f"-{mask_config}-alpha_{alpha}-beta_{beta}-seed_{seed}"
+                    scope = config.get("corruption_layer_scope")
+                    id_parts = [setup_id]
+                    path_parts = []
+                    if custom_student_rel_path:
+                        student_slug_sweep = os.path.basename(
+                            os.path.normpath(custom_student_rel_path)
+                        )
+                        id_parts.append(student_slug_sweep)
+                        path_parts.append(student_slug_sweep)
+                    if scope == "attention_only":
+                        id_parts.append("attnOnlyCorrupt")
+                        path_parts.append("attn_only")
+                    elif scope == "mlp_only":
+                        id_parts.append("mlpOnlyCorrupt")
+                        path_parts.append("mlp_only")
+                    if mask_config:
+                        id_parts.append(mask_config)
+                        path_parts.append(mask_config)
+                    id_parts.extend(
+                        [
+                            f"a{float(alpha)}",
+                            f"b{float(beta)}",
+                            f"s{seed}",
+                        ]
+                    )
+                    exp_id = "_".join(id_parts)
+                    path_parts.extend(
+                        [
+                            f"alpha_{alpha}",
+                            f"beta_{beta}",
+                            f"seed_{seed}",
+                        ]
+                    )
+                    path_suffix = "-" + "-".join(path_parts)
 
                 base_name = f"{model_name_prefix}_{method}-arithmetic-partial_distill"
 
@@ -376,177 +436,3 @@ def load_pretrain_config(yaml_path, setup_id):
     config['path_local_record'] = str(MODEL_DIR / "local_records" / "pretrained_models" / f"{setup_id}.txt")
 
     return config
-
-
-def load_wmdp_unlearn_configs(yaml_path, setup_ids):
-    """
-    Expands WMDP unlearning setups into multiple experiments based on
-    learning rate ranges, alpha ranges, and seeds defined in YAML.
-    """
-    with open(yaml_path, 'r') as f:
-        data = yaml.safe_load(f)
-
-    # Retrieve seeds from sweep section or default config
-    seeds = data.get('sweeps', {}).get('seeds', [data.get('default_config', {}).get('seed', 42)])
-    expanded_experiments = {}
-
-    for base_id in setup_ids:
-        # Merges default_config with specific setup config
-        config_template = _initialize_base_config_by_setup(data, base_id)
-
-        method = config_template['method']
-        # Detect domain (cyber/bio) from the setup ID string
-        domain = 'cyber' if 'cyber' in base_id.lower() else 'bio'
-
-        # Fetch LR and Alpha ranges based on method and domain
-        lrs = data.get('lr_ranges', {}).get(method, [2e-05])
-        alpha_key = f"{method}_{domain}"
-        alphas = data.get('alpha_ranges', {}).get(alpha_key, [0.5])
-
-        for lr in lrs:
-            for alpha in alphas:
-                for seed in seeds:
-                    config = config_template.copy()
-                    lr_val = float(lr)
-                    alpha_val = float(alpha)
-
-                    # Update core hyperparameters for this iteration
-                    config.update({
-                        'learning_rate': lr_val,
-                        'min_lr': lr_val,
-                        'alpha': alpha_val,
-                        'seed': int(seed)
-                    })
-
-                    # Unique identifier for directory naming and tracking
-                    params_str = f'lr_{lr_val:.2e}_alpha_{alpha_val:.2f}_seed_{seed}'
-
-                    # Construct full model path from relative path in YAML
-                    if 'model_rel_path' in config:
-                        config['model_name'] = str(WMDP_MODEL_DIR / config['model_rel_path'])
-
-                    # Set dynamic output directories and record paths
-                    config['output_dir'] = str(MODEL_DIR / f"unlearned_models/{method}/{domain}_{params_str}")
-                    config['path_local_record'] = str(
-                        MODEL_DIR / f"local_records/unlearned_models/{method}/{domain}_{params_str}.txt")
-
-                    # Set informative WandB run name
-                    config['wandb_run_name'] = f"{method}_{domain}_{params_str}"
-
-                    # Construct full data paths
-                    config['forget_train_file'] = str(DATASET_DIR / config['forget_rel_path'])
-                    if 'retain_files' in config:
-                        config['retain_files'] = [str(DATASET_DIR / p) for p in config['retain_files']]
-
-                    unique_id = f"{base_id}_{params_str}"
-                    expanded_experiments[unique_id] = config
-
-    return expanded_experiments
-
-
-def load_wmdp_distill_configs(yaml_path, setup_ids, model_map):
-    with open(yaml_path, 'r') as f:
-        data = yaml.safe_load(f)
-
-    sweep = data.get('sweeps', {})
-    dataset_info = data.get('datasets', {})
-    expanded_experiments = {}
-
-    for setup_id in setup_ids:
-        config_template = _initialize_base_config_by_setup(data, setup_id)
-
-        for model_name, model_path_template in model_map.items():
-            for dataset_name, d_val in dataset_info.items():
-                for seed in sweep.get('seeds', [42]):
-                    for lr in sweep.get('lrs', [2e-5]):
-                        for alpha in sweep.get('alphas', [0.25]):
-                            for teacher_pct in sweep.get('base_teacher_percents', [0]):
-
-                                config = config_template.copy()
-
-                                if isinstance(model_path_template, tuple):
-                                    config['teacher_model_name'] = model_path_template[0].replace("SEED", str(seed))
-                                    config['student_model_name'] = model_path_template[1].replace("SEED", str(seed))
-                                else:
-                                    path = model_path_template.replace("SEED", str(seed))
-                                    config['teacher_model_name'] = path
-                                    config['student_model_name'] = path
-
-                                config.update({
-                                    'learning_rate': float(lr),
-                                    'min_lr': float(lr / 10.0),
-                                    'seed': int(seed),
-                                    'noise_alpha': float(alpha),
-                                    'use_base_teacher_percent': float(teacher_pct)
-                                })
-
-                                # Dataset logic
-                                config['train_files'] = [str(DATASET_DIR / f) for f in d_val['files']]
-                                config['interleave_probs'] = d_val['probs']
-                                config['domain'] = 'cyber' if 'cyber' in model_name else (
-                                    'bio' if 'bio' in model_name else 'both')
-
-                                # Path Naming
-                                exp_slug = f"{config['domain']}/{model_name}/{setup_id}-{dataset_name}-lr_{lr:2e}-seed_{seed}-tp_{teacher_pct}"
-                                config['output_dir'] = str(WMDP_MODEL_DIR / "distilled_models" / exp_slug)
-                                config['path_local_record'] = str(WMDP_MODEL_DIR / "local_records" / f"{exp_slug}.txt")
-                                config['wandb_run_name'] = exp_slug.replace('/', '_')
-
-                                unique_id = f"{setup_id}_{model_name}_{dataset_name}_{seed}_{teacher_pct}"
-                                expanded_experiments[unique_id] = config
-
-    return expanded_experiments
-
-
-def load_wmdp_relearn_configs(yaml_path, setup_ids, model_map, eval_on_loss=False):
-    with open(yaml_path, 'r') as f:
-        data = yaml.safe_load(f)
-
-    sweep_seeds = data.get('sweeps', {}).get('seeds', [42])
-    dataset_info = data.get('datasets', {})
-    expanded_experiments = {}
-
-    for setup_id in setup_ids:
-        config_template = _initialize_base_config_by_setup(data, setup_id)
-
-        for model_name, model_path_template in model_map.items():
-            for data_name, d_val in dataset_info.items():
-
-                # Domain safety check: Only pair bio data with bio models, etc.
-                if not (("bio" in data_name and "bio" in model_name) or
-                        ("cyber" in data_name and "cyber" in model_name)):
-                    continue
-
-                for seed in sweep_seeds:
-                    for lr in d_val['lrs']:
-                        config = config_template.copy()
-
-                        # Handle training logic
-                        config['learning_rate'] = float(lr)
-                        config['min_lr'] = float(lr)
-                        config['seed'] = int(seed)
-                        config['model_name'] = str(WMDP_MODEL_DIR / model_path_template.replace("SEED", str(seed)))
-
-                        # Dataset setup
-                        config['train_files'] = [str(DATASET_DIR / f) for f in d_val['files']]
-                        config['interleave_probs'] = d_val['probs']
-
-                        # Dynamic naming logic
-                        eval_prefix = 'loss_eval/' if eval_on_loss else ''
-                        params_slug = f"{eval_prefix}data-{data_name}_lr-{lr}_model-{model_name}_seed-{seed}"
-
-                        config['output_dir'] = str(WMDP_MODEL_DIR / "relearned_models" / params_slug)
-                        config['path_local_record'] = str(
-                            WMDP_MODEL_DIR / "local_records" / "relearned_models" / f"{params_slug}.txt")
-                        config['wandb_run_name'] = params_slug.replace('/', '_')
-                        config['wandb_project'] = f"relearn_{'cyber' if 'cyber' in model_name else 'bio'}"
-
-                        # Special case for initial evaluations
-                        if 'initial' in data_name:
-                            config['validation_steps'] = [0]
-                            config['max_steps'] = 1
-
-                        unique_id = f"{setup_id}_{params_slug}"
-                        expanded_experiments[unique_id] = config
-
-    return expanded_experiments

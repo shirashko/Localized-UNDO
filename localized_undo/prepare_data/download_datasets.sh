@@ -38,6 +38,7 @@ conda activate undo
 cd /home/morg/students/rashkovits/Localized-UNDO
 export PYTHONPATH="${PYTHONPATH:+${PYTHONPATH}:}$(pwd)"
 mkdir -p logs
-python localized_undo/prepare_data/download_datasets.py --mode wmdp
+python localized_undo/prepare_data/download_datasets.py 
+# --mode wmdp
 
 echo "Download process for WMDP completed at $(date)"

@@ -1,10 +1,15 @@
 import os
-from src.tools.relearn_wmdp import relearn
-from src.utils.paths import CACHE_DIR, DATASET_DIR, WMDP_MODEL_DIR
+from localized_undo.tools.relearn_wmdp import relearn
+from localized_undo.utils.paths import CACHE_DIR, DATASET_DIR, WMDP_MODEL_DIR
 from accelerate import Accelerator
-from utils.loss_functions import custom_login
-from src.utils.validation_functions import get_wmdp_bio_eval_fn, get_both_wmdp_eval_fn, get_loss_eval_fn
-from utils.parallel_launch import launch_in_parallel_one_per_gpu, get_parallel_launch_wrapper
+from localized_undo.utils.loss_functions import custom_login
+from localized_undo.utils.validation_functions import (
+    get_wmdp_bio_eval_fn,
+    get_wmdp_cyber_eval_fn,
+    get_both_wmdp_eval_fn,
+    get_loss_eval_fn,
+)
+from localized_undo.utils.parallel_launch import launch_in_parallel_one_per_gpu, get_parallel_launch_wrapper
 
 FINAL_RUN = True
 
@@ -15,10 +20,10 @@ SETUPS_TO_RUN = [
 eval_on_loss = False
 
 MODELS_TO_RUN = {
-    "gemma-2-2b": "/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/gemma-2-2b",
+    "gemma-2-2b": WMDP_MODEL_DIR / "gemma-2-2b",
 }
 
-SWEEP_SEEDS = [42, 43, 44, 45]
+SWEEP_SEEDS = [42] # [42, 43, 44, 45]
 
 # DATA_TO_RUN maps experiment names to their data configurations.
 # Structure: 
@@ -91,6 +96,21 @@ DATA_TO_RUN = {
 
 custom_login()
 
+def validate_data_files(data_to_run):
+    missing_files = []
+    for experiment_name, (files, _probs, _lrs) in data_to_run.items():
+        for file_path in files:
+            if not os.path.isfile(file_path):
+                missing_files.append((experiment_name, file_path))
+
+    if missing_files:
+        details = "\n".join(
+            f"  - [{exp_name}] {path}" for exp_name, path in missing_files
+        )
+        raise FileNotFoundError(
+            "Missing dataset files referenced in DATA_TO_RUN:\n" + details
+        )
+
 shared_setup = {
     'model_name': f"{WMDP_MODEL_DIR}/PATH",
     'train_files': [],
@@ -137,7 +157,7 @@ setups = {
 
 def launch_relearn(setup_id, lr, model, files, seed, eval_on_loss):
     name, path = model
-    path = path.replace("SEED", str(seed))
+    path = str(path).replace("SEED", str(seed))
     file_name, files_tup = files
     train_files, interleave_probs = files_tup
     if eval_on_loss and "qa" in file_name:
@@ -154,9 +174,10 @@ def launch_relearn(setup_id, lr, model, files, seed, eval_on_loss):
         current_setup["model_name"] = path
     else:
         current_setup["model_name"] = current_setup["model_name"].replace("PATH", path)
-    current_setup['path_local_record'] = current_setup['path_local_record'].replace('TBD', name_tbd)
-    current_setup['output_dir'] = current_setup['output_dir'].replace('TBD', name_tbd)
-    current_setup['wandb_run_name'] = current_setup['wandb_run_name'].replace('TBD', name_tbd)
+
+    for key in ('path_local_record', 'output_dir', 'wandb_run_name'):
+        current_setup[key] = current_setup[key].replace('TBD', name_tbd)
+
     current_setup['seed'] = seed
     if 'initial' in file_name:
         current_setup['validation_steps'] = [0]
@@ -164,8 +185,8 @@ def launch_relearn(setup_id, lr, model, files, seed, eval_on_loss):
 
     if 'long' in setup_id:
         assert current_setup['batch_size'] % 4 == 0
-        current_setup['max_len'] *= 4 
-        current_setup['batch_size'] /= 4
+        current_setup['max_length'] *= 4
+        current_setup['batch_size'] //= 4
 
     accelerator = Accelerator()
     train_percent = None
@@ -175,11 +196,14 @@ def launch_relearn(setup_id, lr, model, files, seed, eval_on_loss):
         eval_fn = get_loss_eval_fn(
             accelerator=accelerator,
         )
-    elif 'bio' in name.lower():
+    elif 'bio' in file_name.lower():
         current_setup['wandb_project'] = current_setup['wandb_project'].replace('CORPUS', 'bio')
         eval_fn = get_wmdp_bio_eval_fn(accelerator, large_eval=FINAL_RUN, no_mmlu=not 'initial' in file_name)
+    elif 'cyber' in file_name.lower():
+        current_setup['wandb_project'] = current_setup['wandb_project'].replace('CORPUS', 'cyber')
+        eval_fn = get_wmdp_cyber_eval_fn(accelerator, large_eval=FINAL_RUN, no_mmlu=not 'initial' in file_name)
     else:
-        current_setup['wandb_project'] = current_setup['wandb_project'].replace('CORPUS', 'baseline')
+        current_setup['wandb_project'] = current_setup['wandb_project'].replace('CORPUS', 'bio_baseline')
         eval_fn = get_both_wmdp_eval_fn(accelerator, large_eval=FINAL_RUN)
 
     relearn(
@@ -223,6 +247,8 @@ if __name__ == "__main__":
     # ----------------------------------------------------------------- #
     # Run all experiments, if possible in parallel
     # ----------------------------------------------------------------- #
+    validate_data_files(DATA_TO_RUN)
+
     # Create list of the setups (arguments for run_experiment) for all the experiments we want to run 
     experiments = []
     for setup_id in SETUPS_TO_RUN:
@@ -238,7 +264,7 @@ if __name__ == "__main__":
                         if data_model_match:
                             experiments.append((setup_id, lr, (model_name, model_path), (data_name, (files, probs)), seed, eval_on_loss))
                         else:
-                            print(f"NOT ADDING, model and data don't match, setup: {data_name}, model: {model_name}")
+                            print(f"Requested experiment {data_name} with model {model_name} does not match. Skipping.")
 
     # Gets a wrapper function compatable with the parallel launch function
     parallel_fn = get_parallel_launch_wrapper(launch_relearn)

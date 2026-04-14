@@ -1,0 +1,920 @@
+--------------------------------------------------------
+Starting WMDP Unlearning Sweep on Node: t-100
+Date: Tue Apr 14 11:34:01 AM IDT 2026
+--------------------------------------------------------
+Logging into Hugging Face with token from tokens/hf_token.txt...
+[1m[31mCannot authenticate through git-credential as no helper is defined on your machine.
+You might have to re-authenticate when pushing to the Hugging Face Hub.
+Run the following command in your terminal in case you want to set the 'store' credential helper as default.
+
+git config --global credential.helper store
+
+Read https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage for more details.[0m
+Logging into Weights & Biases with token from tokens/wandb_token.txt...
+Running 8 experiments with learning rate search:
+  - bio_MaxEnt_lr_2.00e-05_alpha_0.30_seed_42 (LR: 2.0e-05)
+  - bio_MaxEnt_lr_2.00e-05_alpha_0.30_seed_43 (LR: 2.0e-05)
+  - bio_MaxEnt_lr_2.00e-05_alpha_0.30_seed_44 (LR: 2.0e-05)
+  - bio_MaxEnt_lr_2.00e-05_alpha_0.30_seed_45 (LR: 2.0e-05)
+  - bio_MaxEnt_lr_2.00e-05_alpha_0.10_seed_42 (LR: 2.0e-05)
+  - bio_MaxEnt_lr_2.00e-05_alpha_0.10_seed_43 (LR: 2.0e-05)
+  - bio_MaxEnt_lr_2.00e-05_alpha_0.10_seed_44 (LR: 2.0e-05)
+  - bio_MaxEnt_lr_2.00e-05_alpha_0.10_seed_45 (LR: 2.0e-05)
+Starting on GPU 0: args=('bio_MaxEnt_lr_2.00e-05_alpha_0.30_seed_42',)
+Logging into Hugging Face with token from tokens/hf_token.txt...
+[1m[31mCannot authenticate through git-credential as no helper is defined on your machine.
+You might have to re-authenticate when pushing to the Hugging Face Hub.
+Run the following command in your terminal in case you want to set the 'store' credential helper as default.
+
+git config --global credential.helper store
+
+Read https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage for more details.[0m
+Logging into Weights & Biases with token from tokens/wandb_token.txt...
+Running MaxEnt with learning rate 2e-05
+[maxent.py] Initiated training with:
+{'model_name': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/gemma-2-2b', 'forget_train_file': '/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_remove_dataset_qa.jsonl', 'retain_files': ['/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_retain_dataset_qa.jsonl', '/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wikitext.jsonl'], 'interleave_probs': [0.5, 0.5], 'stopping_strategy': 'first_exhausted', 'eval_fn': <function get_wmdp_bio_eval_fn.<locals>.<lambda> at 0x74cda9f12dd0>, 'accelerator': <accelerate.accelerator.Accelerator object at 0x74cdaa9fbb80>, 'output_dir': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.30_seed_42', 'cache_dir': PosixPath('/home/morg/students/rashkovits/Localized-UNDO/.cache'), 'dataset_cache_dir': PosixPath('/home/morg/students/rashkovits/Localized-UNDO/.cache'), 'join_or_subsequence': True, 'use_retain': True, 'use_retain_kl': True, 'alpha': 0.3, 'seed': 42, 'device': 'cuda', 'batch_size': 4, 'gradient_accumulation_steps': 10, 'epochs': 5, 'max_steps': 90, 'validation_steps': 100, 'save_checkpoint_steps': -1, 'scheduler_type': 'cosine', 'weight_decay': 0.0, 'gradient_clipping_threshold': 1.0, 'use_wandb': True, 'wandb_project': 'bio_unlearn_MaxEnt', 'wandb_run_name': 'lr_2.00e-05_alpha_0.30_seed_42', 'use_local_record': True, 'path_local_record': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/local_records/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.30_seed_42.txt', 'overwrite_ok': True, 'use_repnoise': False, 'repnoise_beta': 1.0, 'repnoise_alpha': 1.0, 'use_sam': False, 'sam_rho': 0.01, 'print_message': True, 'learning_rate': 2e-05, 'max_length': 256, 'min_lr': 2e-05, 'num_warmup_steps': 0}
+[loss_functions.py/custom_makedirs] Created directory: /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.30_seed_42
+[loss_functions.py/custom_makedirs] Created directory: /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/local_records/unlearned_models/MaxEnt
+[maxent.py] Loading model /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/gemma-2-2b
+[maxent.py] Loading 'forget' dataset
+[maxent.py] Forget dataset size: 38415
+[maxent.py] Sample forget text: "What is the mechanism by which adenovirus infection leads to the degradation of SPOC1? Answer: Adenovirus infection leads to the proteasomal degradation of SPOC1, mediated by the E1B-55K/E4orf6 E3 lig..."
+[process_dataset.py] Created sliding windows of length 256
+[maxent.py] => loading 'retain' dataset
+[maxent.py] Loading train dataset from /home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_retain_dataset_qa.jsonl
+[maxent.py] Loading train dataset from /home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wikitext.jsonl
+[process_dataset.py] Created sliding windows of length 256
+[maxent.py] Interleaving with probabilities: [0.5, 0.5]
+[maxent.py] Train dataset size: 18142
+[maxent.py] Sample distillation dataset text 0: "<bos> = Valkyria Chronicles III = 
+<bos><bos> Senjō no Valkyria 3 : <unk> Chronicles ( Japanese : 戦場のヴァルキュリア3 , lit . Valkyria of the Battlefield 3 ) , commonly referred to as Valkyria Chronicles III ..."
+[maxent.py] Sample distillation dataset text 1: "What are some ocular disorders that are associated with cigarette smoking, according to the text?
+Answer: Cigarette smoking is associated with several ocular disorders, including diabetic retinopathy,..."
+[maxent.py] Sample distillation dataset text 2: " team of writers handled the script . The game 's opening theme was sung by May 'n . 
+<bos> It met with positive sales in Japan , and was praised by both Japanese and western critics . After release ,..."
+[maxent.py] 4535 steps per epoch, total steps: 90
+[maxent.py] Using AdamW optimizer, LR=2e-05, weight_decay=0.0
+[maxent.py] Starting training
+[maxent.py] Epoch 1/5
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 16.250000
+[maxent.py] Retain CE: -0.000334
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.562500
+[maxent.py] Retain CE: 2.484375
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.406250
+[maxent.py] Retain CE: 2.593750
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.343750
+[maxent.py] Retain CE: 3.140625
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.656250
+[maxent.py] Retain CE: 2.062500
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.468750
+[maxent.py] Retain CE: 2.093750
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.312500
+[maxent.py] Retain CE: 2.187500
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.468750
+[maxent.py] Retain CE: 2.390625
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.312500
+[maxent.py] Retain CE: 3.703125
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.687500
+[maxent.py] Retain CE: 2.953125
+[maxent.py] Epoch 1/5, Step 5/90, Uniform-Forget => CE_forget(uniform): 1.023438
+[maxent.py] Retain CE: 2.593750
+[maxent.py] Epoch 1/5, Step 10/90, Uniform-Forget => CE_forget(uniform): 0.550781
+[maxent.py] Retain CE: 1.507812
+[maxent.py] Epoch 1/5, Step 15/90, Uniform-Forget => CE_forget(uniform): 0.757812
+[maxent.py] Retain CE: 0.656250
+[maxent.py] Epoch 1/5, Step 20/90, Uniform-Forget => CE_forget(uniform): 0.341797
+[maxent.py] Retain CE: 0.683594
+[maxent.py] Epoch 1/5, Step 25/90, Uniform-Forget => CE_forget(uniform): 0.196289
+[maxent.py] Retain CE: 0.949219
+[maxent.py] Epoch 1/5, Step 30/90, Uniform-Forget => CE_forget(uniform): 0.972656
+[maxent.py] Retain CE: 0.574219
+[maxent.py] Epoch 1/5, Step 35/90, Uniform-Forget => CE_forget(uniform): 0.267578
+[maxent.py] Retain CE: 2.000000
+[maxent.py] Epoch 1/5, Step 40/90, Uniform-Forget => CE_forget(uniform): 0.176758
+[maxent.py] Retain CE: 0.412109
+[maxent.py] Epoch 1/5, Step 45/90, Uniform-Forget => CE_forget(uniform): 0.388672
+[maxent.py] Retain CE: 0.406250
+[maxent.py] Epoch 1/5, Step 50/90, Uniform-Forget => CE_forget(uniform): 0.335938
+[maxent.py] Retain CE: 1.007812
+[maxent.py] Epoch 1/5, Step 55/90, Uniform-Forget => CE_forget(uniform): 0.210938
+[maxent.py] Retain CE: 0.427734
+[maxent.py] Epoch 1/5, Step 60/90, Uniform-Forget => CE_forget(uniform): 0.154297
+[maxent.py] Retain CE: 0.621094
+[maxent.py] Epoch 1/5, Step 65/90, Uniform-Forget => CE_forget(uniform): 0.660156
+[maxent.py] Retain CE: 0.808594
+[maxent.py] Epoch 1/5, Step 70/90, Uniform-Forget => CE_forget(uniform): 0.169922
+[maxent.py] Retain CE: 0.308594
+[maxent.py] Epoch 1/5, Step 75/90, Uniform-Forget => CE_forget(uniform): 0.707031
+[maxent.py] Retain CE: 0.343750
+[maxent.py] Epoch 1/5, Step 80/90, Uniform-Forget => CE_forget(uniform): 0.125977
+[maxent.py] Retain CE: 0.503906
+[maxent.py] Epoch 1/5, Step 85/90, Uniform-Forget => CE_forget(uniform): 0.132812
+[maxent.py] Retain CE: 1.015625
+[maxent.py] Epoch 1/5, Step 90/90, Uniform-Forget => CE_forget(uniform): 0.091309
+[maxent.py] Retain CE: 0.656250
+[maxent.py] Reached max_steps => Stopping.
+[maxent.py] Running final validation after training completion...
+Logging into Hugging Face with token from tokens/hf_token.txt...
+[1m[31mCannot authenticate through git-credential as no helper is defined on your machine.
+You might have to re-authenticate when pushing to the Hugging Face Hub.
+Run the following command in your terminal in case you want to set the 'store' credential helper as default.
+
+git config --global credential.helper store
+
+Read https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage for more details.[0m
+Logging into Weights & Biases with token from tokens/wandb_token.txt...
+[validation_functions.py] Setting wmdp_bio few shot to [0]
+[validation_functions.py] Setting mmlu few shot to [5]
+[validation_functions.py] Validation Results:
+[validation_functions.py] 	wmdp_bio_limit_None_shots_0: 0.2474469756480754
+[validation_functions.py] 	wmdp_bio time: 57.77316856384277
+[validation_functions.py] 	mmlu_limit_0.4_shots_5: 0.46486870120652946
+[validation_functions.py] 	mmlu time: 340.623929977417
+[validation_functions.py] 	total time: 400.803160905838
+[maxent.py] Model saved to => /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.30_seed_42/final_model
+Starting on GPU 0: args=('bio_MaxEnt_lr_2.00e-05_alpha_0.30_seed_43',)
+Logging into Hugging Face with token from tokens/hf_token.txt...
+[1m[31mCannot authenticate through git-credential as no helper is defined on your machine.
+You might have to re-authenticate when pushing to the Hugging Face Hub.
+Run the following command in your terminal in case you want to set the 'store' credential helper as default.
+
+git config --global credential.helper store
+
+Read https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage for more details.[0m
+Logging into Weights & Biases with token from tokens/wandb_token.txt...
+Running MaxEnt with learning rate 2e-05
+[maxent.py] Initiated training with:
+{'model_name': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/gemma-2-2b', 'forget_train_file': '/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_remove_dataset_qa.jsonl', 'retain_files': ['/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_retain_dataset_qa.jsonl', '/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wikitext.jsonl'], 'interleave_probs': [0.5, 0.5], 'stopping_strategy': 'first_exhausted', 'eval_fn': <function get_wmdp_bio_eval_fn.<locals>.<lambda> at 0x79d309316dd0>, 'accelerator': <accelerate.accelerator.Accelerator object at 0x79d309dffb50>, 'output_dir': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.30_seed_43', 'cache_dir': PosixPath('/home/morg/students/rashkovits/Localized-UNDO/.cache'), 'dataset_cache_dir': PosixPath('/home/morg/students/rashkovits/Localized-UNDO/.cache'), 'join_or_subsequence': True, 'use_retain': True, 'use_retain_kl': True, 'alpha': 0.3, 'seed': 43, 'device': 'cuda', 'batch_size': 4, 'gradient_accumulation_steps': 10, 'epochs': 5, 'max_steps': 90, 'validation_steps': 100, 'save_checkpoint_steps': -1, 'scheduler_type': 'cosine', 'weight_decay': 0.0, 'gradient_clipping_threshold': 1.0, 'use_wandb': True, 'wandb_project': 'bio_unlearn_MaxEnt', 'wandb_run_name': 'lr_2.00e-05_alpha_0.30_seed_43', 'use_local_record': True, 'path_local_record': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/local_records/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.30_seed_43.txt', 'overwrite_ok': True, 'use_repnoise': False, 'repnoise_beta': 1.0, 'repnoise_alpha': 1.0, 'use_sam': False, 'sam_rho': 0.01, 'print_message': True, 'learning_rate': 2e-05, 'max_length': 256, 'min_lr': 2e-05, 'num_warmup_steps': 0}
+[loss_functions.py/custom_makedirs] Created directory: /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.30_seed_43
+[loss_functions.py/custom_makedirs] Created directory: /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/local_records/unlearned_models/MaxEnt
+[maxent.py] Loading model /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/gemma-2-2b
+[maxent.py] Loading 'forget' dataset
+[maxent.py] Forget dataset size: 38415
+[maxent.py] Sample forget text: "What is the mechanism by which adenovirus infection leads to the degradation of SPOC1? Answer: Adenovirus infection leads to the proteasomal degradation of SPOC1, mediated by the E1B-55K/E4orf6 E3 lig..."
+[process_dataset.py] Created sliding windows of length 256
+[maxent.py] => loading 'retain' dataset
+[maxent.py] Loading train dataset from /home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_retain_dataset_qa.jsonl
+[maxent.py] Loading train dataset from /home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wikitext.jsonl
+[process_dataset.py] Created sliding windows of length 256
+[maxent.py] Interleaving with probabilities: [0.5, 0.5]
+[maxent.py] Train dataset size: 18215
+[maxent.py] Sample distillation dataset text 0: "<bos> = Valkyria Chronicles III = 
+<bos><bos> Senjō no Valkyria 3 : <unk> Chronicles ( Japanese : 戦場のヴァルキュリア3 , lit . Valkyria of the Battlefield 3 ) , commonly referred to as Valkyria Chronicles III ..."
+[maxent.py] Sample distillation dataset text 1: "What are some ocular disorders that are associated with cigarette smoking, according to the text?
+Answer: Cigarette smoking is associated with several ocular disorders, including diabetic retinopathy,..."
+[maxent.py] Sample distillation dataset text 2: " condition?
+Answer: The first-line treatment typically involves a combination of topical medications and lifestyle modifications to manage symptoms and prevent disease progression.<bos>What are some o..."
+[maxent.py] 4553 steps per epoch, total steps: 90
+[maxent.py] Using AdamW optimizer, LR=2e-05, weight_decay=0.0
+[maxent.py] Starting training
+[maxent.py] Epoch 1/5
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 15.812500
+[maxent.py] Retain CE: -0.000031
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.531250
+[maxent.py] Retain CE: 4.062500
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.500000
+[maxent.py] Retain CE: 3.281250
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.562500
+[maxent.py] Retain CE: 1.156250
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.593750
+[maxent.py] Retain CE: 3.343750
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.406250
+[maxent.py] Retain CE: 2.437500
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.562500
+[maxent.py] Retain CE: 2.265625
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.468750
+[maxent.py] Retain CE: 2.984375
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.562500
+[maxent.py] Retain CE: 3.828125
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.593750
+[maxent.py] Retain CE: 2.671875
+[maxent.py] Epoch 1/5, Step 5/90, Uniform-Forget => CE_forget(uniform): 0.953125
+[maxent.py] Retain CE: 2.859375
+[maxent.py] Epoch 1/5, Step 10/90, Uniform-Forget => CE_forget(uniform): 0.546875
+[maxent.py] Retain CE: 2.671875
+[maxent.py] Epoch 1/5, Step 15/90, Uniform-Forget => CE_forget(uniform): 0.503906
+[maxent.py] Retain CE: 1.070312
+[maxent.py] Epoch 1/5, Step 20/90, Uniform-Forget => CE_forget(uniform): 0.296875
+[maxent.py] Retain CE: 0.562500
+[maxent.py] Epoch 1/5, Step 25/90, Uniform-Forget => CE_forget(uniform): 0.839844
+[maxent.py] Retain CE: 0.507812
+[maxent.py] Epoch 1/5, Step 30/90, Uniform-Forget => CE_forget(uniform): 0.193359
+[maxent.py] Retain CE: 1.218750
+[maxent.py] Epoch 1/5, Step 35/90, Uniform-Forget => CE_forget(uniform): 0.253906
+[maxent.py] Retain CE: 2.000000
+[maxent.py] Epoch 1/5, Step 40/90, Uniform-Forget => CE_forget(uniform): 0.178711
+[maxent.py] Retain CE: 0.601562
+[maxent.py] Epoch 1/5, Step 45/90, Uniform-Forget => CE_forget(uniform): 0.136719
+[maxent.py] Retain CE: 0.566406
+[maxent.py] Epoch 1/5, Step 50/90, Uniform-Forget => CE_forget(uniform): 0.445312
+[maxent.py] Retain CE: 0.421875
+[maxent.py] Epoch 1/5, Step 55/90, Uniform-Forget => CE_forget(uniform): 0.236328
+[maxent.py] Retain CE: 0.625000
+[maxent.py] Epoch 1/5, Step 60/90, Uniform-Forget => CE_forget(uniform): 0.115234
+[maxent.py] Retain CE: 1.281250
+[maxent.py] Epoch 1/5, Step 65/90, Uniform-Forget => CE_forget(uniform): 0.146484
+[maxent.py] Retain CE: 0.582031
+[maxent.py] Epoch 1/5, Step 70/90, Uniform-Forget => CE_forget(uniform): 0.550781
+[maxent.py] Retain CE: 1.218750
+[maxent.py] Epoch 1/5, Step 75/90, Uniform-Forget => CE_forget(uniform): 0.187500
+[maxent.py] Retain CE: 0.318359
+[maxent.py] Epoch 1/5, Step 80/90, Uniform-Forget => CE_forget(uniform): 0.073242
+[maxent.py] Retain CE: 1.250000
+[maxent.py] Epoch 1/5, Step 85/90, Uniform-Forget => CE_forget(uniform): 0.104004
+[maxent.py] Retain CE: 0.867188
+[maxent.py] Epoch 1/5, Step 90/90, Uniform-Forget => CE_forget(uniform): 0.127930
+[maxent.py] Retain CE: 0.667969
+[maxent.py] Reached max_steps => Stopping.
+[maxent.py] Running final validation after training completion...
+Logging into Hugging Face with token from tokens/hf_token.txt...
+[1m[31mCannot authenticate through git-credential as no helper is defined on your machine.
+You might have to re-authenticate when pushing to the Hugging Face Hub.
+Run the following command in your terminal in case you want to set the 'store' credential helper as default.
+
+git config --global credential.helper store
+
+Read https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage for more details.[0m
+Logging into Weights & Biases with token from tokens/wandb_token.txt...
+[validation_functions.py] Setting wmdp_bio few shot to [0]
+[validation_functions.py] Setting mmlu few shot to [5]
+[validation_functions.py] Validation Results:
+[validation_functions.py] 	wmdp_bio_limit_None_shots_0: 0.2498036135113904
+[validation_functions.py] 	wmdp_bio time: 48.91145420074463
+[validation_functions.py] 	mmlu_limit_0.4_shots_5: 0.45138396025550037
+[validation_functions.py] 	mmlu time: 337.4604821205139
+[validation_functions.py] 	total time: 389.0515208244324
+[maxent.py] Model saved to => /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.30_seed_43/final_model
+Starting on GPU 0: args=('bio_MaxEnt_lr_2.00e-05_alpha_0.30_seed_44',)
+Logging into Hugging Face with token from tokens/hf_token.txt...
+[1m[31mCannot authenticate through git-credential as no helper is defined on your machine.
+You might have to re-authenticate when pushing to the Hugging Face Hub.
+Run the following command in your terminal in case you want to set the 'store' credential helper as default.
+
+git config --global credential.helper store
+
+Read https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage for more details.[0m
+Logging into Weights & Biases with token from tokens/wandb_token.txt...
+Running MaxEnt with learning rate 2e-05
+[maxent.py] Initiated training with:
+{'model_name': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/gemma-2-2b', 'forget_train_file': '/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_remove_dataset_qa.jsonl', 'retain_files': ['/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_retain_dataset_qa.jsonl', '/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wikitext.jsonl'], 'interleave_probs': [0.5, 0.5], 'stopping_strategy': 'first_exhausted', 'eval_fn': <function get_wmdp_bio_eval_fn.<locals>.<lambda> at 0x741af4322dd0>, 'accelerator': <accelerate.accelerator.Accelerator object at 0x741af430bb50>, 'output_dir': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.30_seed_44', 'cache_dir': PosixPath('/home/morg/students/rashkovits/Localized-UNDO/.cache'), 'dataset_cache_dir': PosixPath('/home/morg/students/rashkovits/Localized-UNDO/.cache'), 'join_or_subsequence': True, 'use_retain': True, 'use_retain_kl': True, 'alpha': 0.3, 'seed': 44, 'device': 'cuda', 'batch_size': 4, 'gradient_accumulation_steps': 10, 'epochs': 5, 'max_steps': 90, 'validation_steps': 100, 'save_checkpoint_steps': -1, 'scheduler_type': 'cosine', 'weight_decay': 0.0, 'gradient_clipping_threshold': 1.0, 'use_wandb': True, 'wandb_project': 'bio_unlearn_MaxEnt', 'wandb_run_name': 'lr_2.00e-05_alpha_0.30_seed_44', 'use_local_record': True, 'path_local_record': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/local_records/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.30_seed_44.txt', 'overwrite_ok': True, 'use_repnoise': False, 'repnoise_beta': 1.0, 'repnoise_alpha': 1.0, 'use_sam': False, 'sam_rho': 0.01, 'print_message': True, 'learning_rate': 2e-05, 'max_length': 256, 'min_lr': 2e-05, 'num_warmup_steps': 0}
+[loss_functions.py/custom_makedirs] Created directory: /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.30_seed_44
+[loss_functions.py/custom_makedirs] Created directory: /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/local_records/unlearned_models/MaxEnt
+[maxent.py] Loading model /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/gemma-2-2b
+[maxent.py] Loading 'forget' dataset
+[maxent.py] Forget dataset size: 38415
+[maxent.py] Sample forget text: "What is the mechanism by which adenovirus infection leads to the degradation of SPOC1? Answer: Adenovirus infection leads to the proteasomal degradation of SPOC1, mediated by the E1B-55K/E4orf6 E3 lig..."
+[process_dataset.py] Created sliding windows of length 256
+[maxent.py] => loading 'retain' dataset
+[maxent.py] Loading train dataset from /home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_retain_dataset_qa.jsonl
+[maxent.py] Loading train dataset from /home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wikitext.jsonl
+[process_dataset.py] Created sliding windows of length 256
+[maxent.py] Interleaving with probabilities: [0.5, 0.5]
+[maxent.py] Train dataset size: 17904
+[maxent.py] Sample distillation dataset text 0: "What are some ocular disorders that are associated with cigarette smoking, according to the text?
+Answer: Cigarette smoking is associated with several ocular disorders, including diabetic retinopathy,..."
+[maxent.py] Sample distillation dataset text 1: " condition?
+Answer: The first-line treatment typically involves a combination of topical medications and lifestyle modifications to manage symptoms and prevent disease progression.<bos>What are some o..."
+[maxent.py] Sample distillation dataset text 2: "F, which may increase the risk of cerebral vascular leakage or hemorrhage, especially in preterm infants.<bos>What are the two principal causes of peptic ulcer disease?
+Answer: The two main causes of ..."
+[maxent.py] 4476 steps per epoch, total steps: 90
+[maxent.py] Using AdamW optimizer, LR=2e-05, weight_decay=0.0
+[maxent.py] Starting training
+[maxent.py] Epoch 1/5
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 16.000000
+[maxent.py] Retain CE: -0.000177
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.718750
+[maxent.py] Retain CE: 4.250000
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.375000
+[maxent.py] Retain CE: 2.765625
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.531250
+[maxent.py] Retain CE: 5.187500
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.500000
+[maxent.py] Retain CE: 4.281250
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.781250
+[maxent.py] Retain CE: 3.625000
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.593750
+[maxent.py] Retain CE: 6.281250
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.750000
+[maxent.py] Retain CE: 3.250000
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.500000
+[maxent.py] Retain CE: 2.609375
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.718750
+[maxent.py] Retain CE: 2.078125
+[maxent.py] Epoch 1/5, Step 5/90, Uniform-Forget => CE_forget(uniform): 1.132812
+[maxent.py] Retain CE: 2.984375
+[maxent.py] Epoch 1/5, Step 10/90, Uniform-Forget => CE_forget(uniform): 0.695312
+[maxent.py] Retain CE: 1.640625
+[maxent.py] Epoch 1/5, Step 15/90, Uniform-Forget => CE_forget(uniform): 0.404297
+[maxent.py] Retain CE: 0.796875
+[maxent.py] Epoch 1/5, Step 20/90, Uniform-Forget => CE_forget(uniform): 0.371094
+[maxent.py] Retain CE: 0.484375
+[maxent.py] Epoch 1/5, Step 25/90, Uniform-Forget => CE_forget(uniform): 0.312500
+[maxent.py] Retain CE: 0.890625
+[maxent.py] Epoch 1/5, Step 30/90, Uniform-Forget => CE_forget(uniform): 0.232422
+[maxent.py] Retain CE: 0.535156
+[maxent.py] Epoch 1/5, Step 35/90, Uniform-Forget => CE_forget(uniform): 0.227539
+[maxent.py] Retain CE: 0.656250
+[maxent.py] Epoch 1/5, Step 40/90, Uniform-Forget => CE_forget(uniform): 0.269531
+[maxent.py] Retain CE: 0.917969
+[maxent.py] Epoch 1/5, Step 45/90, Uniform-Forget => CE_forget(uniform): 0.168945
+[maxent.py] Retain CE: 0.378906
+[maxent.py] Epoch 1/5, Step 50/90, Uniform-Forget => CE_forget(uniform): 0.361328
+[maxent.py] Retain CE: 1.648438
+[maxent.py] Epoch 1/5, Step 55/90, Uniform-Forget => CE_forget(uniform): 0.121094
+[maxent.py] Retain CE: 0.609375
+[maxent.py] Epoch 1/5, Step 60/90, Uniform-Forget => CE_forget(uniform): 0.105469
+[maxent.py] Retain CE: 0.667969
+[maxent.py] Epoch 1/5, Step 65/90, Uniform-Forget => CE_forget(uniform): 0.196289
+[maxent.py] Retain CE: 0.507812
+[maxent.py] Epoch 1/5, Step 70/90, Uniform-Forget => CE_forget(uniform): 1.140625
+[maxent.py] Retain CE: 0.312500
+[maxent.py] Epoch 1/5, Step 75/90, Uniform-Forget => CE_forget(uniform): 0.496094
+[maxent.py] Retain CE: 0.539062
+[maxent.py] Epoch 1/5, Step 80/90, Uniform-Forget => CE_forget(uniform): 0.458984
+[maxent.py] Retain CE: 0.398438
+[maxent.py] Epoch 1/5, Step 85/90, Uniform-Forget => CE_forget(uniform): 1.164062
+[maxent.py] Retain CE: 0.613281
+[maxent.py] Epoch 1/5, Step 90/90, Uniform-Forget => CE_forget(uniform): 0.108887
+[maxent.py] Retain CE: 0.550781
+[maxent.py] Reached max_steps => Stopping.
+[maxent.py] Running final validation after training completion...
+Logging into Hugging Face with token from tokens/hf_token.txt...
+[1m[31mCannot authenticate through git-credential as no helper is defined on your machine.
+You might have to re-authenticate when pushing to the Hugging Face Hub.
+Run the following command in your terminal in case you want to set the 'store' credential helper as default.
+
+git config --global credential.helper store
+
+Read https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage for more details.[0m
+Logging into Weights & Biases with token from tokens/wandb_token.txt...
+[validation_functions.py] Setting wmdp_bio few shot to [0]
+[validation_functions.py] Setting mmlu few shot to [5]
+[validation_functions.py] Validation Results:
+[validation_functions.py] 	wmdp_bio_limit_None_shots_0: 0.24901806755695208
+[validation_functions.py] 	wmdp_bio time: 47.2334189414978
+[validation_functions.py] 	mmlu_limit_0.4_shots_5: 0.4627395315826828
+[validation_functions.py] 	mmlu time: 337.6673550605774
+[validation_functions.py] 	total time: 387.3340187072754
+[maxent.py] Model saved to => /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.30_seed_44/final_model
+Starting on GPU 0: args=('bio_MaxEnt_lr_2.00e-05_alpha_0.30_seed_45',)
+Logging into Hugging Face with token from tokens/hf_token.txt...
+[1m[31mCannot authenticate through git-credential as no helper is defined on your machine.
+You might have to re-authenticate when pushing to the Hugging Face Hub.
+Run the following command in your terminal in case you want to set the 'store' credential helper as default.
+
+git config --global credential.helper store
+
+Read https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage for more details.[0m
+Logging into Weights & Biases with token from tokens/wandb_token.txt...
+Running MaxEnt with learning rate 2e-05
+[maxent.py] Initiated training with:
+{'model_name': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/gemma-2-2b', 'forget_train_file': '/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_remove_dataset_qa.jsonl', 'retain_files': ['/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_retain_dataset_qa.jsonl', '/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wikitext.jsonl'], 'interleave_probs': [0.5, 0.5], 'stopping_strategy': 'first_exhausted', 'eval_fn': <function get_wmdp_bio_eval_fn.<locals>.<lambda> at 0x7efbd610add0>, 'accelerator': <accelerate.accelerator.Accelerator object at 0x7efbd6bf3f40>, 'output_dir': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.30_seed_45', 'cache_dir': PosixPath('/home/morg/students/rashkovits/Localized-UNDO/.cache'), 'dataset_cache_dir': PosixPath('/home/morg/students/rashkovits/Localized-UNDO/.cache'), 'join_or_subsequence': True, 'use_retain': True, 'use_retain_kl': True, 'alpha': 0.3, 'seed': 45, 'device': 'cuda', 'batch_size': 4, 'gradient_accumulation_steps': 10, 'epochs': 5, 'max_steps': 90, 'validation_steps': 100, 'save_checkpoint_steps': -1, 'scheduler_type': 'cosine', 'weight_decay': 0.0, 'gradient_clipping_threshold': 1.0, 'use_wandb': True, 'wandb_project': 'bio_unlearn_MaxEnt', 'wandb_run_name': 'lr_2.00e-05_alpha_0.30_seed_45', 'use_local_record': True, 'path_local_record': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/local_records/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.30_seed_45.txt', 'overwrite_ok': True, 'use_repnoise': False, 'repnoise_beta': 1.0, 'repnoise_alpha': 1.0, 'use_sam': False, 'sam_rho': 0.01, 'print_message': True, 'learning_rate': 2e-05, 'max_length': 256, 'min_lr': 2e-05, 'num_warmup_steps': 0}
+[loss_functions.py/custom_makedirs] Created directory: /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.30_seed_45
+[loss_functions.py/custom_makedirs] Created directory: /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/local_records/unlearned_models/MaxEnt
+[maxent.py] Loading model /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/gemma-2-2b
+[maxent.py] Loading 'forget' dataset
+[maxent.py] Forget dataset size: 38415
+[maxent.py] Sample forget text: "What is the mechanism by which adenovirus infection leads to the degradation of SPOC1? Answer: Adenovirus infection leads to the proteasomal degradation of SPOC1, mediated by the E1B-55K/E4orf6 E3 lig..."
+[process_dataset.py] Created sliding windows of length 256
+[maxent.py] => loading 'retain' dataset
+[maxent.py] Loading train dataset from /home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_retain_dataset_qa.jsonl
+[maxent.py] Loading train dataset from /home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wikitext.jsonl
+[process_dataset.py] Created sliding windows of length 256
+[maxent.py] Interleaving with probabilities: [0.5, 0.5]
+[maxent.py] Train dataset size: 18121
+[maxent.py] Sample distillation dataset text 0: "<bos> = Valkyria Chronicles III = 
+<bos><bos> Senjō no Valkyria 3 : <unk> Chronicles ( Japanese : 戦場のヴァルキュリア3 , lit . Valkyria of the Battlefield 3 ) , commonly referred to as Valkyria Chronicles III ..."
+[maxent.py] Sample distillation dataset text 1: " team of writers handled the script . The game 's opening theme was sung by May 'n . 
+<bos> It met with positive sales in Japan , and was praised by both Japanese and western critics . After release ,..."
+[maxent.py] Sample distillation dataset text 2: " an individual player 's approach : when one option is selected , the other is sealed off to the player . Outside missions , the player characters rest in a camp , where units can be customized and ch..."
+[maxent.py] 4530 steps per epoch, total steps: 90
+[maxent.py] Using AdamW optimizer, LR=2e-05, weight_decay=0.0
+[maxent.py] Starting training
+[maxent.py] Epoch 1/5
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 15.750000
+[maxent.py] Retain CE: -0.000137
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.656250
+[maxent.py] Retain CE: 4.625000
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.656250
+[maxent.py] Retain CE: 1.968750
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.843750
+[maxent.py] Retain CE: 4.218750
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.625000
+[maxent.py] Retain CE: 3.000000
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.781250
+[maxent.py] Retain CE: 3.359375
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.500000
+[maxent.py] Retain CE: 3.046875
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.656250
+[maxent.py] Retain CE: 2.671875
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.812500
+[maxent.py] Retain CE: 1.937500
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.718750
+[maxent.py] Retain CE: 4.937500
+[maxent.py] Epoch 1/5, Step 5/90, Uniform-Forget => CE_forget(uniform): 0.968750
+[maxent.py] Retain CE: 2.437500
+[maxent.py] Epoch 1/5, Step 10/90, Uniform-Forget => CE_forget(uniform): 0.613281
+[maxent.py] Retain CE: 0.972656
+[maxent.py] Epoch 1/5, Step 15/90, Uniform-Forget => CE_forget(uniform): 0.388672
+[maxent.py] Retain CE: 1.593750
+[maxent.py] Epoch 1/5, Step 20/90, Uniform-Forget => CE_forget(uniform): 0.306641
+[maxent.py] Retain CE: 1.351562
+[maxent.py] Epoch 1/5, Step 25/90, Uniform-Forget => CE_forget(uniform): 0.511719
+[maxent.py] Retain CE: 0.929688
+[maxent.py] Epoch 1/5, Step 30/90, Uniform-Forget => CE_forget(uniform): 0.435547
+[maxent.py] Retain CE: 0.480469
+[maxent.py] Epoch 1/5, Step 35/90, Uniform-Forget => CE_forget(uniform): 0.225586
+[maxent.py] Retain CE: 0.644531
+[maxent.py] Epoch 1/5, Step 40/90, Uniform-Forget => CE_forget(uniform): 0.431641
+[maxent.py] Retain CE: 0.421875
+[maxent.py] Epoch 1/5, Step 45/90, Uniform-Forget => CE_forget(uniform): 0.312500
+[maxent.py] Retain CE: 0.460938
+[maxent.py] Epoch 1/5, Step 50/90, Uniform-Forget => CE_forget(uniform): 0.330078
+[maxent.py] Retain CE: 0.566406
+[maxent.py] Epoch 1/5, Step 55/90, Uniform-Forget => CE_forget(uniform): 0.201172
+[maxent.py] Retain CE: 1.046875
+[maxent.py] Epoch 1/5, Step 60/90, Uniform-Forget => CE_forget(uniform): 0.121094
+[maxent.py] Retain CE: 0.365234
+[maxent.py] Epoch 1/5, Step 65/90, Uniform-Forget => CE_forget(uniform): 0.119141
+[maxent.py] Retain CE: 0.292969
+[maxent.py] Epoch 1/5, Step 70/90, Uniform-Forget => CE_forget(uniform): 0.128906
+[maxent.py] Retain CE: 0.511719
+[maxent.py] Epoch 1/5, Step 75/90, Uniform-Forget => CE_forget(uniform): 0.734375
+[maxent.py] Retain CE: 0.324219
+[maxent.py] Epoch 1/5, Step 80/90, Uniform-Forget => CE_forget(uniform): 0.105469
+[maxent.py] Retain CE: 0.441406
+[maxent.py] Epoch 1/5, Step 85/90, Uniform-Forget => CE_forget(uniform): 0.263672
+[maxent.py] Retain CE: 1.179688
+[maxent.py] Epoch 1/5, Step 90/90, Uniform-Forget => CE_forget(uniform): 0.117676
+[maxent.py] Retain CE: 0.349609
+[maxent.py] Reached max_steps => Stopping.
+[maxent.py] Running final validation after training completion...
+Logging into Hugging Face with token from tokens/hf_token.txt...
+[1m[31mCannot authenticate through git-credential as no helper is defined on your machine.
+You might have to re-authenticate when pushing to the Hugging Face Hub.
+Run the following command in your terminal in case you want to set the 'store' credential helper as default.
+
+git config --global credential.helper store
+
+Read https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage for more details.[0m
+Logging into Weights & Biases with token from tokens/wandb_token.txt...
+[validation_functions.py] Setting wmdp_bio few shot to [0]
+[validation_functions.py] Setting mmlu few shot to [5]
+[validation_functions.py] Validation Results:
+[validation_functions.py] 	wmdp_bio_limit_None_shots_0: 0.2474469756480754
+[validation_functions.py] 	wmdp_bio time: 46.517983198165894
+[validation_functions.py] 	mmlu_limit_0.4_shots_5: 0.4501419446415898
+[validation_functions.py] 	mmlu time: 336.7945907115936
+[validation_functions.py] 	total time: 385.6172912120819
+[maxent.py] Model saved to => /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.30_seed_45/final_model
+Starting on GPU 0: args=('bio_MaxEnt_lr_2.00e-05_alpha_0.10_seed_42',)
+Logging into Hugging Face with token from tokens/hf_token.txt...
+[1m[31mCannot authenticate through git-credential as no helper is defined on your machine.
+You might have to re-authenticate when pushing to the Hugging Face Hub.
+Run the following command in your terminal in case you want to set the 'store' credential helper as default.
+
+git config --global credential.helper store
+
+Read https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage for more details.[0m
+Logging into Weights & Biases with token from tokens/wandb_token.txt...
+Running MaxEnt with learning rate 2e-05
+[maxent.py] Initiated training with:
+{'model_name': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/gemma-2-2b', 'forget_train_file': '/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_remove_dataset_qa.jsonl', 'retain_files': ['/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_retain_dataset_qa.jsonl', '/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wikitext.jsonl'], 'interleave_probs': [0.5, 0.5], 'stopping_strategy': 'first_exhausted', 'eval_fn': <function get_wmdp_bio_eval_fn.<locals>.<lambda> at 0x729a56f12dd0>, 'accelerator': <accelerate.accelerator.Accelerator object at 0x729a579fba90>, 'output_dir': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.10_seed_42', 'cache_dir': PosixPath('/home/morg/students/rashkovits/Localized-UNDO/.cache'), 'dataset_cache_dir': PosixPath('/home/morg/students/rashkovits/Localized-UNDO/.cache'), 'join_or_subsequence': True, 'use_retain': True, 'use_retain_kl': True, 'alpha': 0.1, 'seed': 42, 'device': 'cuda', 'batch_size': 4, 'gradient_accumulation_steps': 10, 'epochs': 5, 'max_steps': 90, 'validation_steps': 100, 'save_checkpoint_steps': -1, 'scheduler_type': 'cosine', 'weight_decay': 0.0, 'gradient_clipping_threshold': 1.0, 'use_wandb': True, 'wandb_project': 'bio_unlearn_MaxEnt', 'wandb_run_name': 'lr_2.00e-05_alpha_0.10_seed_42', 'use_local_record': True, 'path_local_record': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/local_records/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.10_seed_42.txt', 'overwrite_ok': True, 'use_repnoise': False, 'repnoise_beta': 1.0, 'repnoise_alpha': 1.0, 'use_sam': False, 'sam_rho': 0.01, 'print_message': True, 'learning_rate': 2e-05, 'max_length': 256, 'min_lr': 2e-05, 'num_warmup_steps': 0}
+[loss_functions.py/custom_makedirs] Created directory: /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.10_seed_42
+[loss_functions.py/custom_makedirs] Created directory: /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/local_records/unlearned_models/MaxEnt
+[maxent.py] Loading model /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/gemma-2-2b
+[maxent.py] Loading 'forget' dataset
+[maxent.py] Forget dataset size: 38415
+[maxent.py] Sample forget text: "What is the mechanism by which adenovirus infection leads to the degradation of SPOC1? Answer: Adenovirus infection leads to the proteasomal degradation of SPOC1, mediated by the E1B-55K/E4orf6 E3 lig..."
+[process_dataset.py] Created sliding windows of length 256
+[maxent.py] => loading 'retain' dataset
+[maxent.py] Loading train dataset from /home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_retain_dataset_qa.jsonl
+[maxent.py] Loading train dataset from /home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wikitext.jsonl
+[process_dataset.py] Created sliding windows of length 256
+[maxent.py] Interleaving with probabilities: [0.5, 0.5]
+[maxent.py] Train dataset size: 18142
+[maxent.py] Sample distillation dataset text 0: "<bos> = Valkyria Chronicles III = 
+<bos><bos> Senjō no Valkyria 3 : <unk> Chronicles ( Japanese : 戦場のヴァルキュリア3 , lit . Valkyria of the Battlefield 3 ) , commonly referred to as Valkyria Chronicles III ..."
+[maxent.py] Sample distillation dataset text 1: "What are some ocular disorders that are associated with cigarette smoking, according to the text?
+Answer: Cigarette smoking is associated with several ocular disorders, including diabetic retinopathy,..."
+[maxent.py] Sample distillation dataset text 2: " team of writers handled the script . The game 's opening theme was sung by May 'n . 
+<bos> It met with positive sales in Japan , and was praised by both Japanese and western critics . After release ,..."
+[maxent.py] 4535 steps per epoch, total steps: 90
+[maxent.py] Using AdamW optimizer, LR=2e-05, weight_decay=0.0
+[maxent.py] Starting training
+[maxent.py] Epoch 1/5
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 16.250000
+[maxent.py] Retain CE: -0.000334
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.562500
+[maxent.py] Retain CE: 2.484375
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.406250
+[maxent.py] Retain CE: 2.593750
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.343750
+[maxent.py] Retain CE: 3.140625
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.656250
+[maxent.py] Retain CE: 2.062500
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.468750
+[maxent.py] Retain CE: 2.109375
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.312500
+[maxent.py] Retain CE: 2.187500
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.468750
+[maxent.py] Retain CE: 2.390625
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.312500
+[maxent.py] Retain CE: 3.703125
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.687500
+[maxent.py] Retain CE: 2.968750
+[maxent.py] Epoch 1/5, Step 5/90, Uniform-Forget => CE_forget(uniform): 0.800781
+[maxent.py] Retain CE: 4.531250
+[maxent.py] Epoch 1/5, Step 10/90, Uniform-Forget => CE_forget(uniform): 0.404297
+[maxent.py] Retain CE: 3.156250
+[maxent.py] Epoch 1/5, Step 15/90, Uniform-Forget => CE_forget(uniform): 0.617188
+[maxent.py] Retain CE: 1.914062
+[maxent.py] Epoch 1/5, Step 20/90, Uniform-Forget => CE_forget(uniform): 0.231445
+[maxent.py] Retain CE: 1.468750
+[maxent.py] Epoch 1/5, Step 25/90, Uniform-Forget => CE_forget(uniform): 0.136719
+[maxent.py] Retain CE: 1.500000
+[maxent.py] Epoch 1/5, Step 30/90, Uniform-Forget => CE_forget(uniform): 0.171875
+[maxent.py] Retain CE: 2.234375
+[maxent.py] Epoch 1/5, Step 35/90, Uniform-Forget => CE_forget(uniform): 0.143555
+[maxent.py] Retain CE: 2.703125
+[maxent.py] Epoch 1/5, Step 40/90, Uniform-Forget => CE_forget(uniform): 0.110352
+[maxent.py] Retain CE: 0.605469
+[maxent.py] Epoch 1/5, Step 45/90, Uniform-Forget => CE_forget(uniform): 0.402344
+[maxent.py] Retain CE: 0.878906
+[maxent.py] Epoch 1/5, Step 50/90, Uniform-Forget => CE_forget(uniform): 0.244141
+[maxent.py] Retain CE: 0.582031
+[maxent.py] Epoch 1/5, Step 55/90, Uniform-Forget => CE_forget(uniform): 0.084961
+[maxent.py] Retain CE: 1.828125
+[maxent.py] Epoch 1/5, Step 60/90, Uniform-Forget => CE_forget(uniform): 0.091309
+[maxent.py] Retain CE: 0.933594
+[maxent.py] Epoch 1/5, Step 65/90, Uniform-Forget => CE_forget(uniform): 0.291016
+[maxent.py] Retain CE: 1.789062
+[maxent.py] Epoch 1/5, Step 70/90, Uniform-Forget => CE_forget(uniform): 0.070801
+[maxent.py] Retain CE: 0.435547
+[maxent.py] Epoch 1/5, Step 75/90, Uniform-Forget => CE_forget(uniform): 0.332031
+[maxent.py] Retain CE: 0.691406
+[maxent.py] Epoch 1/5, Step 80/90, Uniform-Forget => CE_forget(uniform): 0.067871
+[maxent.py] Retain CE: 0.925781
+[maxent.py] Epoch 1/5, Step 85/90, Uniform-Forget => CE_forget(uniform): 0.055908
+[maxent.py] Retain CE: 1.312500
+[maxent.py] Epoch 1/5, Step 90/90, Uniform-Forget => CE_forget(uniform): 0.056641
+[maxent.py] Retain CE: 0.882812
+[maxent.py] Reached max_steps => Stopping.
+[maxent.py] Running final validation after training completion...
+Logging into Hugging Face with token from tokens/hf_token.txt...
+[1m[31mCannot authenticate through git-credential as no helper is defined on your machine.
+You might have to re-authenticate when pushing to the Hugging Face Hub.
+Run the following command in your terminal in case you want to set the 'store' credential helper as default.
+
+git config --global credential.helper store
+
+Read https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage for more details.[0m
+Logging into Weights & Biases with token from tokens/wandb_token.txt...
+[validation_functions.py] Setting wmdp_bio few shot to [0]
+[validation_functions.py] Setting mmlu few shot to [5]
+[validation_functions.py] Validation Results:
+[validation_functions.py] 	wmdp_bio_limit_None_shots_0: 0.24666142969363708
+[validation_functions.py] 	wmdp_bio time: 45.94392514228821
+[validation_functions.py] 	mmlu_limit_0.4_shots_5: 0.4143009226401703
+[validation_functions.py] 	mmlu time: 329.4927945137024
+[validation_functions.py] 	total time: 377.84009552001953
+[maxent.py] Model saved to => /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.10_seed_42/final_model
+Starting on GPU 0: args=('bio_MaxEnt_lr_2.00e-05_alpha_0.10_seed_43',)
+Logging into Hugging Face with token from tokens/hf_token.txt...
+[1m[31mCannot authenticate through git-credential as no helper is defined on your machine.
+You might have to re-authenticate when pushing to the Hugging Face Hub.
+Run the following command in your terminal in case you want to set the 'store' credential helper as default.
+
+git config --global credential.helper store
+
+Read https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage for more details.[0m
+Logging into Weights & Biases with token from tokens/wandb_token.txt...
+Running MaxEnt with learning rate 2e-05
+[maxent.py] Initiated training with:
+{'model_name': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/gemma-2-2b', 'forget_train_file': '/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_remove_dataset_qa.jsonl', 'retain_files': ['/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_retain_dataset_qa.jsonl', '/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wikitext.jsonl'], 'interleave_probs': [0.5, 0.5], 'stopping_strategy': 'first_exhausted', 'eval_fn': <function get_wmdp_bio_eval_fn.<locals>.<lambda> at 0x72d12370ed40>, 'accelerator': <accelerate.accelerator.Accelerator object at 0x72d1241f7a00>, 'output_dir': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.10_seed_43', 'cache_dir': PosixPath('/home/morg/students/rashkovits/Localized-UNDO/.cache'), 'dataset_cache_dir': PosixPath('/home/morg/students/rashkovits/Localized-UNDO/.cache'), 'join_or_subsequence': True, 'use_retain': True, 'use_retain_kl': True, 'alpha': 0.1, 'seed': 43, 'device': 'cuda', 'batch_size': 4, 'gradient_accumulation_steps': 10, 'epochs': 5, 'max_steps': 90, 'validation_steps': 100, 'save_checkpoint_steps': -1, 'scheduler_type': 'cosine', 'weight_decay': 0.0, 'gradient_clipping_threshold': 1.0, 'use_wandb': True, 'wandb_project': 'bio_unlearn_MaxEnt', 'wandb_run_name': 'lr_2.00e-05_alpha_0.10_seed_43', 'use_local_record': True, 'path_local_record': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/local_records/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.10_seed_43.txt', 'overwrite_ok': True, 'use_repnoise': False, 'repnoise_beta': 1.0, 'repnoise_alpha': 1.0, 'use_sam': False, 'sam_rho': 0.01, 'print_message': True, 'learning_rate': 2e-05, 'max_length': 256, 'min_lr': 2e-05, 'num_warmup_steps': 0}
+[loss_functions.py/custom_makedirs] Created directory: /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.10_seed_43
+[loss_functions.py/custom_makedirs] Created directory: /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/local_records/unlearned_models/MaxEnt
+[maxent.py] Loading model /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/gemma-2-2b
+[maxent.py] Loading 'forget' dataset
+[maxent.py] Forget dataset size: 38415
+[maxent.py] Sample forget text: "What is the mechanism by which adenovirus infection leads to the degradation of SPOC1? Answer: Adenovirus infection leads to the proteasomal degradation of SPOC1, mediated by the E1B-55K/E4orf6 E3 lig..."
+[process_dataset.py] Created sliding windows of length 256
+[maxent.py] => loading 'retain' dataset
+[maxent.py] Loading train dataset from /home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_retain_dataset_qa.jsonl
+[maxent.py] Loading train dataset from /home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wikitext.jsonl
+[process_dataset.py] Created sliding windows of length 256
+[maxent.py] Interleaving with probabilities: [0.5, 0.5]
+[maxent.py] Train dataset size: 18215
+[maxent.py] Sample distillation dataset text 0: "<bos> = Valkyria Chronicles III = 
+<bos><bos> Senjō no Valkyria 3 : <unk> Chronicles ( Japanese : 戦場のヴァルキュリア3 , lit . Valkyria of the Battlefield 3 ) , commonly referred to as Valkyria Chronicles III ..."
+[maxent.py] Sample distillation dataset text 1: "What are some ocular disorders that are associated with cigarette smoking, according to the text?
+Answer: Cigarette smoking is associated with several ocular disorders, including diabetic retinopathy,..."
+[maxent.py] Sample distillation dataset text 2: " condition?
+Answer: The first-line treatment typically involves a combination of topical medications and lifestyle modifications to manage symptoms and prevent disease progression.<bos>What are some o..."
+[maxent.py] 4553 steps per epoch, total steps: 90
+[maxent.py] Using AdamW optimizer, LR=2e-05, weight_decay=0.0
+[maxent.py] Starting training
+[maxent.py] Epoch 1/5
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 15.812500
+[maxent.py] Retain CE: -0.000031
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.531250
+[maxent.py] Retain CE: 4.093750
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.500000
+[maxent.py] Retain CE: 3.296875
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.562500
+[maxent.py] Retain CE: 1.156250
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.593750
+[maxent.py] Retain CE: 3.359375
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.406250
+[maxent.py] Retain CE: 2.437500
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.562500
+[maxent.py] Retain CE: 2.265625
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.468750
+[maxent.py] Retain CE: 3.000000
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.593750
+[maxent.py] Retain CE: 3.843750
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.625000
+[maxent.py] Retain CE: 2.671875
+[maxent.py] Epoch 1/5, Step 5/90, Uniform-Forget => CE_forget(uniform): 0.753906
+[maxent.py] Retain CE: 5.093750
+[maxent.py] Epoch 1/5, Step 10/90, Uniform-Forget => CE_forget(uniform): 0.400391
+[maxent.py] Retain CE: 4.968750
+[maxent.py] Epoch 1/5, Step 15/90, Uniform-Forget => CE_forget(uniform): 0.355469
+[maxent.py] Retain CE: 1.531250
+[maxent.py] Epoch 1/5, Step 20/90, Uniform-Forget => CE_forget(uniform): 0.181641
+[maxent.py] Retain CE: 0.777344
+[maxent.py] Epoch 1/5, Step 25/90, Uniform-Forget => CE_forget(uniform): 0.245117
+[maxent.py] Retain CE: 0.710938
+[maxent.py] Epoch 1/5, Step 30/90, Uniform-Forget => CE_forget(uniform): 0.128906
+[maxent.py] Retain CE: 1.117188
+[maxent.py] Epoch 1/5, Step 35/90, Uniform-Forget => CE_forget(uniform): 0.119141
+[maxent.py] Retain CE: 3.343750
+[maxent.py] Epoch 1/5, Step 40/90, Uniform-Forget => CE_forget(uniform): 0.102539
+[maxent.py] Retain CE: 1.015625
+[maxent.py] Epoch 1/5, Step 45/90, Uniform-Forget => CE_forget(uniform): 0.093262
+[maxent.py] Retain CE: 0.812500
+[maxent.py] Epoch 1/5, Step 50/90, Uniform-Forget => CE_forget(uniform): 0.191406
+[maxent.py] Retain CE: 0.734375
+[maxent.py] Epoch 1/5, Step 55/90, Uniform-Forget => CE_forget(uniform): 0.120117
+[maxent.py] Retain CE: 0.894531
+[maxent.py] Epoch 1/5, Step 60/90, Uniform-Forget => CE_forget(uniform): 0.069336
+[maxent.py] Retain CE: 1.921875
+[maxent.py] Epoch 1/5, Step 65/90, Uniform-Forget => CE_forget(uniform): 0.060791
+[maxent.py] Retain CE: 1.507812
+[maxent.py] Epoch 1/5, Step 70/90, Uniform-Forget => CE_forget(uniform): 0.378906
+[maxent.py] Retain CE: 2.375000
+[maxent.py] Epoch 1/5, Step 75/90, Uniform-Forget => CE_forget(uniform): 0.088379
+[maxent.py] Retain CE: 0.468750
+[maxent.py] Epoch 1/5, Step 80/90, Uniform-Forget => CE_forget(uniform): 0.053467
+[maxent.py] Retain CE: 2.609375
+[maxent.py] Epoch 1/5, Step 85/90, Uniform-Forget => CE_forget(uniform): 0.060547
+[maxent.py] Retain CE: 1.406250
+[maxent.py] Epoch 1/5, Step 90/90, Uniform-Forget => CE_forget(uniform): 0.058838
+[maxent.py] Retain CE: 1.671875
+[maxent.py] Reached max_steps => Stopping.
+[maxent.py] Running final validation after training completion...
+Logging into Hugging Face with token from tokens/hf_token.txt...
+[1m[31mCannot authenticate through git-credential as no helper is defined on your machine.
+You might have to re-authenticate when pushing to the Hugging Face Hub.
+Run the following command in your terminal in case you want to set the 'store' credential helper as default.
+
+git config --global credential.helper store
+
+Read https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage for more details.[0m
+Logging into Weights & Biases with token from tokens/wandb_token.txt...
+[validation_functions.py] Setting wmdp_bio few shot to [0]
+[validation_functions.py] Setting mmlu few shot to [5]
+[validation_functions.py] Validation Results:
+[validation_functions.py] 	wmdp_bio_limit_None_shots_0: 0.24666142969363708
+[validation_functions.py] 	wmdp_bio time: 46.75490427017212
+[validation_functions.py] 	mmlu_limit_0.4_shots_5: 0.4302696948190206
+[validation_functions.py] 	mmlu time: 335.06164479255676
+[validation_functions.py] 	total time: 384.4291641712189
+[maxent.py] Model saved to => /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.10_seed_43/final_model
+Starting on GPU 0: args=('bio_MaxEnt_lr_2.00e-05_alpha_0.10_seed_44',)
+Logging into Hugging Face with token from tokens/hf_token.txt...
+[1m[31mCannot authenticate through git-credential as no helper is defined on your machine.
+You might have to re-authenticate when pushing to the Hugging Face Hub.
+Run the following command in your terminal in case you want to set the 'store' credential helper as default.
+
+git config --global credential.helper store
+
+Read https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage for more details.[0m
+Logging into Weights & Biases with token from tokens/wandb_token.txt...
+Running MaxEnt with learning rate 2e-05
+[maxent.py] Initiated training with:
+{'model_name': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/gemma-2-2b', 'forget_train_file': '/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_remove_dataset_qa.jsonl', 'retain_files': ['/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_retain_dataset_qa.jsonl', '/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wikitext.jsonl'], 'interleave_probs': [0.5, 0.5], 'stopping_strategy': 'first_exhausted', 'eval_fn': <function get_wmdp_bio_eval_fn.<locals>.<lambda> at 0x7305b8f1edd0>, 'accelerator': <accelerate.accelerator.Accelerator object at 0x7305b8f07b20>, 'output_dir': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.10_seed_44', 'cache_dir': PosixPath('/home/morg/students/rashkovits/Localized-UNDO/.cache'), 'dataset_cache_dir': PosixPath('/home/morg/students/rashkovits/Localized-UNDO/.cache'), 'join_or_subsequence': True, 'use_retain': True, 'use_retain_kl': True, 'alpha': 0.1, 'seed': 44, 'device': 'cuda', 'batch_size': 4, 'gradient_accumulation_steps': 10, 'epochs': 5, 'max_steps': 90, 'validation_steps': 100, 'save_checkpoint_steps': -1, 'scheduler_type': 'cosine', 'weight_decay': 0.0, 'gradient_clipping_threshold': 1.0, 'use_wandb': True, 'wandb_project': 'bio_unlearn_MaxEnt', 'wandb_run_name': 'lr_2.00e-05_alpha_0.10_seed_44', 'use_local_record': True, 'path_local_record': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/local_records/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.10_seed_44.txt', 'overwrite_ok': True, 'use_repnoise': False, 'repnoise_beta': 1.0, 'repnoise_alpha': 1.0, 'use_sam': False, 'sam_rho': 0.01, 'print_message': True, 'learning_rate': 2e-05, 'max_length': 256, 'min_lr': 2e-05, 'num_warmup_steps': 0}
+[loss_functions.py/custom_makedirs] Created directory: /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.10_seed_44
+[loss_functions.py/custom_makedirs] Created directory: /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/local_records/unlearned_models/MaxEnt
+[maxent.py] Loading model /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/gemma-2-2b
+[maxent.py] Loading 'forget' dataset
+[maxent.py] Forget dataset size: 38415
+[maxent.py] Sample forget text: "What is the mechanism by which adenovirus infection leads to the degradation of SPOC1? Answer: Adenovirus infection leads to the proteasomal degradation of SPOC1, mediated by the E1B-55K/E4orf6 E3 lig..."
+[process_dataset.py] Created sliding windows of length 256
+[maxent.py] => loading 'retain' dataset
+[maxent.py] Loading train dataset from /home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_retain_dataset_qa.jsonl
+[maxent.py] Loading train dataset from /home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wikitext.jsonl
+[process_dataset.py] Created sliding windows of length 256
+[maxent.py] Interleaving with probabilities: [0.5, 0.5]
+[maxent.py] Train dataset size: 17904
+[maxent.py] Sample distillation dataset text 0: "What are some ocular disorders that are associated with cigarette smoking, according to the text?
+Answer: Cigarette smoking is associated with several ocular disorders, including diabetic retinopathy,..."
+[maxent.py] Sample distillation dataset text 1: " condition?
+Answer: The first-line treatment typically involves a combination of topical medications and lifestyle modifications to manage symptoms and prevent disease progression.<bos>What are some o..."
+[maxent.py] Sample distillation dataset text 2: "F, which may increase the risk of cerebral vascular leakage or hemorrhage, especially in preterm infants.<bos>What are the two principal causes of peptic ulcer disease?
+Answer: The two main causes of ..."
+[maxent.py] 4476 steps per epoch, total steps: 90
+[maxent.py] Using AdamW optimizer, LR=2e-05, weight_decay=0.0
+[maxent.py] Starting training
+[maxent.py] Epoch 1/5
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 16.000000
+[maxent.py] Retain CE: -0.000177
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.718750
+[maxent.py] Retain CE: 4.250000
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.375000
+[maxent.py] Retain CE: 2.781250
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.531250
+[maxent.py] Retain CE: 5.187500
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.500000
+[maxent.py] Retain CE: 4.281250
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.781250
+[maxent.py] Retain CE: 3.640625
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.593750
+[maxent.py] Retain CE: 6.281250
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.750000
+[maxent.py] Retain CE: 3.265625
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.500000
+[maxent.py] Retain CE: 2.609375
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.718750
+[maxent.py] Retain CE: 2.093750
+[maxent.py] Epoch 1/5, Step 5/90, Uniform-Forget => CE_forget(uniform): 0.886719
+[maxent.py] Retain CE: 5.125000
+[maxent.py] Epoch 1/5, Step 10/90, Uniform-Forget => CE_forget(uniform): 0.433594
+[maxent.py] Retain CE: 3.656250
+[maxent.py] Epoch 1/5, Step 15/90, Uniform-Forget => CE_forget(uniform): 0.246094
+[maxent.py] Retain CE: 3.609375
+[maxent.py] Epoch 1/5, Step 20/90, Uniform-Forget => CE_forget(uniform): 0.182617
+[maxent.py] Retain CE: 1.320312
+[maxent.py] Epoch 1/5, Step 25/90, Uniform-Forget => CE_forget(uniform): 0.144531
+[maxent.py] Retain CE: 2.421875
+[maxent.py] Epoch 1/5, Step 30/90, Uniform-Forget => CE_forget(uniform): 0.129883
+[maxent.py] Retain CE: 0.820312
+[maxent.py] Epoch 1/5, Step 35/90, Uniform-Forget => CE_forget(uniform): 0.116211
+[maxent.py] Retain CE: 1.070312
+[maxent.py] Epoch 1/5, Step 40/90, Uniform-Forget => CE_forget(uniform): 0.131836
+[maxent.py] Retain CE: 2.656250
+[maxent.py] Epoch 1/5, Step 45/90, Uniform-Forget => CE_forget(uniform): 0.099121
+[maxent.py] Retain CE: 0.644531
+[maxent.py] Epoch 1/5, Step 50/90, Uniform-Forget => CE_forget(uniform): 0.133789
+[maxent.py] Retain CE: 2.203125
+[maxent.py] Epoch 1/5, Step 55/90, Uniform-Forget => CE_forget(uniform): 0.081543
+[maxent.py] Retain CE: 0.996094
+[maxent.py] Epoch 1/5, Step 60/90, Uniform-Forget => CE_forget(uniform): 0.071777
+[maxent.py] Retain CE: 1.179688
+[maxent.py] Epoch 1/5, Step 65/90, Uniform-Forget => CE_forget(uniform): 0.072266
+[maxent.py] Retain CE: 0.894531
+[maxent.py] Epoch 1/5, Step 70/90, Uniform-Forget => CE_forget(uniform): 0.558594
+[maxent.py] Retain CE: 0.566406
+[maxent.py] Epoch 1/5, Step 75/90, Uniform-Forget => CE_forget(uniform): 0.196289
+[maxent.py] Retain CE: 0.824219
+[maxent.py] Epoch 1/5, Step 80/90, Uniform-Forget => CE_forget(uniform): 0.112305
+[maxent.py] Retain CE: 0.617188
+[maxent.py] Epoch 1/5, Step 85/90, Uniform-Forget => CE_forget(uniform): 0.474609
+[maxent.py] Retain CE: 1.164062
+[maxent.py] Epoch 1/5, Step 90/90, Uniform-Forget => CE_forget(uniform): 0.068848
+[maxent.py] Retain CE: 0.683594
+[maxent.py] Reached max_steps => Stopping.
+[maxent.py] Running final validation after training completion...
+Logging into Hugging Face with token from tokens/hf_token.txt...
+[1m[31mCannot authenticate through git-credential as no helper is defined on your machine.
+You might have to re-authenticate when pushing to the Hugging Face Hub.
+Run the following command in your terminal in case you want to set the 'store' credential helper as default.
+
+git config --global credential.helper store
+
+Read https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage for more details.[0m
+Logging into Weights & Biases with token from tokens/wandb_token.txt...
+[validation_functions.py] Setting wmdp_bio few shot to [0]
+[validation_functions.py] Setting mmlu few shot to [5]
+[validation_functions.py] Validation Results:
+[validation_functions.py] 	wmdp_bio_limit_None_shots_0: 0.24823252160251374
+[validation_functions.py] 	wmdp_bio time: 47.523409366607666
+[validation_functions.py] 	mmlu_limit_0.4_shots_5: 0.41767210787792763
+[validation_functions.py] 	mmlu time: 340.0820469856262
+[validation_functions.py] 	total time: 390.11277651786804
+[maxent.py] Model saved to => /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.10_seed_44/final_model
+Starting on GPU 0: args=('bio_MaxEnt_lr_2.00e-05_alpha_0.10_seed_45',)
+Logging into Hugging Face with token from tokens/hf_token.txt...
+[1m[31mCannot authenticate through git-credential as no helper is defined on your machine.
+You might have to re-authenticate when pushing to the Hugging Face Hub.
+Run the following command in your terminal in case you want to set the 'store' credential helper as default.
+
+git config --global credential.helper store
+
+Read https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage for more details.[0m
+Logging into Weights & Biases with token from tokens/wandb_token.txt...
+Running MaxEnt with learning rate 2e-05
+[maxent.py] Initiated training with:
+{'model_name': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/gemma-2-2b', 'forget_train_file': '/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_remove_dataset_qa.jsonl', 'retain_files': ['/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_retain_dataset_qa.jsonl', '/home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wikitext.jsonl'], 'interleave_probs': [0.5, 0.5], 'stopping_strategy': 'first_exhausted', 'eval_fn': <function get_wmdp_bio_eval_fn.<locals>.<lambda> at 0x7d1d21b16dd0>, 'accelerator': <accelerate.accelerator.Accelerator object at 0x7d1d225ffb50>, 'output_dir': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.10_seed_45', 'cache_dir': PosixPath('/home/morg/students/rashkovits/Localized-UNDO/.cache'), 'dataset_cache_dir': PosixPath('/home/morg/students/rashkovits/Localized-UNDO/.cache'), 'join_or_subsequence': True, 'use_retain': True, 'use_retain_kl': True, 'alpha': 0.1, 'seed': 45, 'device': 'cuda', 'batch_size': 4, 'gradient_accumulation_steps': 10, 'epochs': 5, 'max_steps': 90, 'validation_steps': 100, 'save_checkpoint_steps': -1, 'scheduler_type': 'cosine', 'weight_decay': 0.0, 'gradient_clipping_threshold': 1.0, 'use_wandb': True, 'wandb_project': 'bio_unlearn_MaxEnt', 'wandb_run_name': 'lr_2.00e-05_alpha_0.10_seed_45', 'use_local_record': True, 'path_local_record': '/home/morg/students/rashkovits/Localized-UNDO/models/wmdp/local_records/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.10_seed_45.txt', 'overwrite_ok': True, 'use_repnoise': False, 'repnoise_beta': 1.0, 'repnoise_alpha': 1.0, 'use_sam': False, 'sam_rho': 0.01, 'print_message': True, 'learning_rate': 2e-05, 'max_length': 256, 'min_lr': 2e-05, 'num_warmup_steps': 0}
+[loss_functions.py/custom_makedirs] Created directory: /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.10_seed_45
+[loss_functions.py/custom_makedirs] Created directory: /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/local_records/unlearned_models/MaxEnt
+[maxent.py] Loading model /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/gemma-2-2b
+[maxent.py] Loading 'forget' dataset
+[maxent.py] Forget dataset size: 38415
+[maxent.py] Sample forget text: "What is the mechanism by which adenovirus infection leads to the degradation of SPOC1? Answer: Adenovirus infection leads to the proteasomal degradation of SPOC1, mediated by the E1B-55K/E4orf6 E3 lig..."
+[process_dataset.py] Created sliding windows of length 256
+[maxent.py] => loading 'retain' dataset
+[maxent.py] Loading train dataset from /home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wmdp-bio_retain_dataset_qa.jsonl
+[maxent.py] Loading train dataset from /home/morg/students/rashkovits/Localized-UNDO/datasets/pretrain/train_wikitext.jsonl
+[process_dataset.py] Created sliding windows of length 256
+[maxent.py] Interleaving with probabilities: [0.5, 0.5]
+[maxent.py] Train dataset size: 18121
+[maxent.py] Sample distillation dataset text 0: "<bos> = Valkyria Chronicles III = 
+<bos><bos> Senjō no Valkyria 3 : <unk> Chronicles ( Japanese : 戦場のヴァルキュリア3 , lit . Valkyria of the Battlefield 3 ) , commonly referred to as Valkyria Chronicles III ..."
+[maxent.py] Sample distillation dataset text 1: " team of writers handled the script . The game 's opening theme was sung by May 'n . 
+<bos> It met with positive sales in Japan , and was praised by both Japanese and western critics . After release ,..."
+[maxent.py] Sample distillation dataset text 2: " an individual player 's approach : when one option is selected , the other is sealed off to the player . Outside missions , the player characters rest in a camp , where units can be customized and ch..."
+[maxent.py] 4530 steps per epoch, total steps: 90
+[maxent.py] Using AdamW optimizer, LR=2e-05, weight_decay=0.0
+[maxent.py] Starting training
+[maxent.py] Epoch 1/5
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 15.750000
+[maxent.py] Retain CE: -0.000137
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.656250
+[maxent.py] Retain CE: 4.625000
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.656250
+[maxent.py] Retain CE: 1.968750
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.843750
+[maxent.py] Retain CE: 4.250000
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.625000
+[maxent.py] Retain CE: 3.000000
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.781250
+[maxent.py] Retain CE: 3.359375
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.500000
+[maxent.py] Retain CE: 3.062500
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.656250
+[maxent.py] Retain CE: 2.671875
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.812500
+[maxent.py] Retain CE: 1.937500
+[maxent.py] Epoch 1/5, Step 1/90, Uniform-Forget => CE_forget(uniform): 4.718750
+[maxent.py] Retain CE: 4.937500
+[maxent.py] Epoch 1/5, Step 5/90, Uniform-Forget => CE_forget(uniform): 0.765625
+[maxent.py] Retain CE: 4.562500
+[maxent.py] Epoch 1/5, Step 10/90, Uniform-Forget => CE_forget(uniform): 0.435547
+[maxent.py] Retain CE: 1.750000
+[maxent.py] Epoch 1/5, Step 15/90, Uniform-Forget => CE_forget(uniform): 0.355469
+[maxent.py] Retain CE: 2.406250
+[maxent.py] Epoch 1/5, Step 20/90, Uniform-Forget => CE_forget(uniform): 0.220703
+[maxent.py] Retain CE: 1.960938
+[maxent.py] Epoch 1/5, Step 25/90, Uniform-Forget => CE_forget(uniform): 0.414062
+[maxent.py] Retain CE: 1.820312
+[maxent.py] Epoch 1/5, Step 30/90, Uniform-Forget => CE_forget(uniform): 0.257812
+[maxent.py] Retain CE: 0.746094
+[maxent.py] Epoch 1/5, Step 35/90, Uniform-Forget => CE_forget(uniform): 0.135742
+[maxent.py] Retain CE: 2.046875
+[maxent.py] Epoch 1/5, Step 40/90, Uniform-Forget => CE_forget(uniform): 0.121094
+[maxent.py] Retain CE: 0.636719
+[maxent.py] Epoch 1/5, Step 45/90, Uniform-Forget => CE_forget(uniform): 0.193359
+[maxent.py] Retain CE: 0.675781
+[maxent.py] Epoch 1/5, Step 50/90, Uniform-Forget => CE_forget(uniform): 0.130859
+[maxent.py] Retain CE: 1.078125
+[maxent.py] Epoch 1/5, Step 55/90, Uniform-Forget => CE_forget(uniform): 0.103516
+[maxent.py] Retain CE: 1.890625
+[maxent.py] Epoch 1/5, Step 60/90, Uniform-Forget => CE_forget(uniform): 0.079102
+[maxent.py] Retain CE: 0.507812
+[maxent.py] Epoch 1/5, Step 65/90, Uniform-Forget => CE_forget(uniform): 0.061279
+[maxent.py] Retain CE: 0.601562
+[maxent.py] Epoch 1/5, Step 70/90, Uniform-Forget => CE_forget(uniform): 0.077148
+[maxent.py] Retain CE: 0.800781
+[maxent.py] Epoch 1/5, Step 75/90, Uniform-Forget => CE_forget(uniform): 0.271484
+[maxent.py] Retain CE: 0.773438
+[maxent.py] Epoch 1/5, Step 80/90, Uniform-Forget => CE_forget(uniform): 0.075195
+[maxent.py] Retain CE: 0.667969
+[maxent.py] Epoch 1/5, Step 85/90, Uniform-Forget => CE_forget(uniform): 0.123535
+[maxent.py] Retain CE: 2.265625
+[maxent.py] Epoch 1/5, Step 90/90, Uniform-Forget => CE_forget(uniform): 0.061279
+[maxent.py] Retain CE: 0.425781
+[maxent.py] Reached max_steps => Stopping.
+[maxent.py] Running final validation after training completion...
+Logging into Hugging Face with token from tokens/hf_token.txt...
+[1m[31mCannot authenticate through git-credential as no helper is defined on your machine.
+You might have to re-authenticate when pushing to the Hugging Face Hub.
+Run the following command in your terminal in case you want to set the 'store' credential helper as default.
+
+git config --global credential.helper store
+
+Read https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage for more details.[0m
+Logging into Weights & Biases with token from tokens/wandb_token.txt...
+[validation_functions.py] Setting wmdp_bio few shot to [0]
+[validation_functions.py] Setting mmlu few shot to [5]
+[validation_functions.py] Validation Results:
+[validation_functions.py] 	wmdp_bio_limit_None_shots_0: 0.24666142969363708
+[validation_functions.py] 	wmdp_bio time: 47.960649251937866
+[validation_functions.py] 	mmlu_limit_0.4_shots_5: 0.4242370475514549
+[validation_functions.py] 	mmlu time: 341.24845719337463
+[validation_functions.py] 	total time: 392.6146478652954
+[maxent.py] Model saved to => /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.10_seed_45/final_model
+All experiments completed!
+--------------------------------------------------------
+WMDP Unlearning Sweep Finished at Tue Apr 14 01:08:18 PM IDT 2026
+--------------------------------------------------------

@@ -65,6 +65,45 @@ def _log_debug(msg):
         print(msg, flush=True)
 
 
+def _encode_conversations_record(record):
+    """
+    ShareGPT-style multi-turn: list of { "from": "human"|"gpt"|..., "value": "..." }.
+    Concatenates turns. loss_mask is 1 only on assistant (gpt/assistant) tokens.
+    Returns (input_ids, attention_mask, loss_mask) or None if nothing valid.
+    """
+    turns = record.get("conversations")
+    if not isinstance(turns, list) or not turns:
+        return None
+    inp, att, loss_mask = [], [], []
+    first_piece = True
+    for turn in turns:
+        if not isinstance(turn, dict):
+            continue
+        role = turn.get("from") or turn.get("role") or ""
+        value = turn.get("value")
+        if value is None:
+            value = turn.get("content", "")
+        if value is None:
+            continue
+        text = value if isinstance(value, str) else str(value)
+        if not text.strip():
+            continue
+        if not first_piece:
+            text = "\n" + text
+        first_piece = False
+        role_lower = str(role).lower()
+        is_assistant = role_lower in ("gpt", "assistant")
+        encoded = tokenizer(text, add_special_tokens=False, return_attention_mask=True)
+        tid = encoded["input_ids"]
+        tad = encoded["attention_mask"]
+        inp.extend(tid)
+        att.extend(tad)
+        loss_mask.extend([1] * len(tid) if is_assistant else [0] * len(tid))
+    if not inp:
+        return None
+    return inp, att, loss_mask
+
+
 def tokenize_lines(lines, doc_max_len, use_one_per_line):
     """
     Tokenizes a list of JSON lines.
@@ -106,6 +145,15 @@ def tokenize_lines(lines, doc_max_len, use_one_per_line):
                 att = encoded_q['attention_mask'] + encoded_a['attention_mask']
                 loss_mask = [0] * len(encoded_q['input_ids']) + [1] * len(encoded_a['input_ids'])
 
+            elif "conversations" in record:
+                packed = _encode_conversations_record(record)
+                if packed is None:
+                    missing_field_count += 1
+                    if len(missing_field_samples) < MISSING_FIELD_SAMPLE_LIMIT:
+                        missing_field_samples.append(line.strip()[:200])
+                    continue
+                inp, att, loss_mask = packed
+
             else:
                 missing_field_count += 1
                 if len(missing_field_samples) < MISSING_FIELD_SAMPLE_LIMIT:
@@ -131,7 +179,7 @@ def tokenize_lines(lines, doc_max_len, use_one_per_line):
         _log_debug(f"PERCENT LINES KEPT = {len(results) / (len(lines) * 1.0):.4f}")
     if missing_field_count:
         _log_info(
-            f"Skipped {missing_field_count} lines with missing text/response/output/qa fields in this subchunk."
+            f"Skipped {missing_field_count} lines with missing text/response/output/qa/conversations fields in this subchunk."
         )
         if LOG_LEVEL == "debug":
             for sample in missing_field_samples:
@@ -170,13 +218,15 @@ def build_and_save_dataset(
         subchunk_size=SUBCHUNK_SIZE
 ):
     custom_makedirs(os.path.dirname(train_out_path), exist_ok=True)
-    custom_makedirs(os.path.dirname(valid_out_path), exist_ok=True)
+    write_valid = valid_target > 0
+    if write_valid:
+        custom_makedirs(os.path.dirname(valid_out_path), exist_ok=True)
 
     train_so_far = 0
     valid_so_far = 0
 
     fout_train = open(train_out_path, "a", encoding="utf-8")
-    fout_valid = open(valid_out_path, "a", encoding="utf-8")
+    fout_valid = open(valid_out_path, "a", encoding="utf-8") if write_valid else None
 
     with Pool(processes=NUM_PROCESSES) as pool:
         chunk_index = 0
@@ -253,7 +303,8 @@ def build_and_save_dataset(
                             "attention_mask": new_mask,
                             "loss_mask": new_loss_mask
                         }
-                        fout_valid.write(json.dumps(record, ensure_ascii=False) + "\n")
+                        if fout_valid is not None:
+                            fout_valid.write(json.dumps(record, ensure_ascii=False) + "\n")
 
                     else:
                         leftover = need_train
@@ -294,7 +345,8 @@ def build_and_save_dataset(
                 break
 
     fout_train.close()
-    fout_valid.close()
+    if fout_valid is not None:
+        fout_valid.close()
 
     return train_so_far, valid_so_far
 
@@ -365,8 +417,7 @@ def main():
             print(
                 f"Skipping {file_name} dataset generation as file {data_file} does not exist exists or {data_train_out} does exist.",
                 flush=True)
-    for file_name in ['wmdp-cyber-forget-corpus', 'wmdp-cyber-retain-corpus', 'wmdp-bio_retain_dataset',
-                      'wmdp-bio_remove_dataset', "wmdp-wikipedia"]:
+    for file_name in ['wmdp-bio_retain_dataset', 'wmdp-bio_remove_dataset']: # 'wmdp-wikipedia', 'wmdp-cyber-forget-corpus', 'wmdp-cyber-retain-corpus', 
         if 'cyber' in file_name:
             data_file = DATASET_DIR / f"eric-wmdp-data/{file_name}.jsonl"
         else:
@@ -419,7 +470,7 @@ def main():
                 f"Skipping Arithmetic dataset generation as file {arith_file} does not exist exists or {arith_train_out} does exist.",
                 flush=True)
 
-    for file_name in ['cyber-retain-corpus', 'cyber-forget-corpus', 'bio_remove_dataset', 'bio_retain_dataset']:
+    for file_name in ['bio_remove_dataset', 'bio_retain_dataset']: # 'cyber-retain-corpus', 'cyber-forget-corpus', 
         wmdp_train_out = os.path.join(OUT_DIR, f"train_{file_name}.jsonl")
         wmdp_valid_out = os.path.join(OUT_DIR, f"valid_{file_name}.jsonl")
         wmdp_file = DATASET_DIR / f"wmdp/{file_name}.jsonl"
