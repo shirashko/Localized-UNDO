@@ -1,4 +1,6 @@
 from accelerate import Accelerator
+from pathlib import Path
+
 from localized_undo.tools.partial_distill_wmdp import partial_distill
 from localized_undo.utils.paths import CACHE_DIR, DATASET_DIR, WMDP_MODEL_DIR
 from localized_undo.utils.loss_functions import custom_login
@@ -17,21 +19,22 @@ SWEEP_LRS = [2e-5]
 SWEEP_BASE_TEACH_PS = [0]
 SWEEP_ALPHAS = [.25]
 
+DATASET_BASE_DIR = DATASET_DIR / "pretrain"
+FILES_NAMES = [
+    "train_eng.jsonl",
+    "train_wikipedia.jsonl",
+    "train_magpie.jsonl",
+    "train_magpie3-1.jsonl",
+    "train_magpie-3.jsonl",
+    "train_magpie-gemma2.jsonl",
+    "train_magpie-phi3.jsonl",
+    "train_magpie-qwen.jsonl",
+    "train_magpie-qwen2.jsonl",
+    "train_wmdp-wikipedia_qa.jsonl",
+]
 SWEEP_FILES = {
-    'all data': ([
-                                            f"{DATASET_DIR}/pretrain/train_eng.jsonl", 
-                                            f"{DATASET_DIR}/pretrain/train_wikipedia.jsonl", 
-
-                                            f"{DATASET_DIR}/pretrain/train_magpie.jsonl",
-                                            f"{DATASET_DIR}/pretrain/train_magpie3-1.jsonl",
-                                            f"{DATASET_DIR}/pretrain/train_magpie-3.jsonl",
-                                            f"{DATASET_DIR}/pretrain/train_magpie-gemma2.jsonl",
-                                            f"{DATASET_DIR}/pretrain/train_magpie-phi3.jsonl",
-                                            f"{DATASET_DIR}/pretrain/train_magpie-qwen.jsonl",
-                                            f"{DATASET_DIR}/pretrain/train_magpie-qwen2.jsonl",
-                                            f"{DATASET_DIR}/pretrain/train_wmdp-wikipedia_qa.jsonl"
-                                        ],
-                                        [.35, .35, .05, .04, .04, .04, .04, .04, .04, .01]),
+    'all data': ([DATASET_BASE_DIR / file for file in FILES_NAMES],
+                 [.35, .35, .05, .04, .04, .04, .04, .04, .04, .01]),
 }
 
 
