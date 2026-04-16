@@ -10,11 +10,12 @@ from localized_undo.utils.parallel_launch import launch_in_parallel_one_per_gpu,
 SETUPS_TO_RUN = ["basic"]
 
 MODELS = {
-    'bio_rmu': f'{WMDP_MODEL_DIR}/saved_unlearned_models/RMU/bio_lr_5.00e-05_alpha_0.50_seed_SEED/final_model',
-    'bio_maxent': f'{WMDP_MODEL_DIR}/saved_unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.30_seed_SEED/final_model',
+    'bio_rmu': f'{WMDP_MODEL_DIR}/unlearned_models/RMU/bio_lr_5.00e-05_alpha_0.50_seed_SEED/final_model',
+    # 'bio_maxent': f'{WMDP_MODEL_DIR}/unlearned_models/MaxEnt/bio_lr_2.00e-05_alpha_0.30_seed_SEED/final_model',
     # 'base': f'{WMDP_MODEL_DIR}/gemma-2-2b'
 }
-SEEDS = [60]
+
+SEEDS = [42]
 SWEEP_LRS = [2e-5]
 SWEEP_BASE_TEACH_PS = [0]
 SWEEP_ALPHAS = [.25]
@@ -30,11 +31,10 @@ FILES_NAMES = [
     "train_magpie-phi3.jsonl",
     "train_magpie-qwen.jsonl",
     "train_magpie-qwen2.jsonl",
-    "train_wmdp-wikipedia_qa.jsonl",
 ]
 SWEEP_FILES = {
     'all data': ([DATASET_BASE_DIR / file for file in FILES_NAMES],
-                 [.35, .35, .05, .04, .04, .04, .04, .04, .04, .01]),
+                 [.35, .36, .05, .04, .04, .04, .04, .04, .04]),
 }
 
 
