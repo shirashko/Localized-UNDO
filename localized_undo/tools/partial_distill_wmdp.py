@@ -174,6 +174,7 @@ def partial_distill(
     # ----------------------------------------------------------------
     # Load distillation dataset
     # ----------------------------------------------------------------
+    train_files = [str(f) for f in train_files]
     train_ds_list = []
     for file in train_files:
         print_acc(f"[distill.py] Loading train dataset from {file}", print_message)
