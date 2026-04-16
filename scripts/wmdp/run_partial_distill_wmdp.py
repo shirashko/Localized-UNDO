@@ -55,8 +55,8 @@ def make_setup(**overrides):
         'stopping_strategy': 'all_exhausted',
         'seed': 'TBD',
         'device': "cuda",
-        'batch_size': 10,
-        'gradient_accumulation_steps': 11,
+        'batch_size': 5,
+        'gradient_accumulation_steps': 22,
         'epochs': 2,
         'learning_rate': 'lr',
         'max_steps': 3000,
@@ -89,7 +89,7 @@ def make_setup(**overrides):
     return setup
 
 setups = {
-    "basic": make_setup(validation_steps=500), # batch size 44, 4 and gradient accumulation 10
+    "basic": make_setup(validation_steps=500),
     "activations-and-logits": make_setup(
         batch_size=5,
         gradient_accumulation_steps=22,

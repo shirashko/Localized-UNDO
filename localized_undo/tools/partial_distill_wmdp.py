@@ -309,7 +309,7 @@ def partial_distill(
                         input_ids=batch["input_ids"],
                         attention_mask=batch["attention_mask"],
                         use_cache=False,
-                        output_hidden_states=True
+                        output_hidden_states=use_activation_loss,
                     )
                 if use_base_teacher:
                     base_teacher_out = base_teacher_model(
