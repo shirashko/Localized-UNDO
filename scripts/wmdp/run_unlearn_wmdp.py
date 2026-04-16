@@ -1,4 +1,5 @@
 from accelerate import Accelerator
+import os
 
 from localized_undo.tools.unlearn_wmdp.graddiff import unlearn_graddiff
 from localized_undo.tools.unlearn_wmdp.maxent import unlearn_maxent
@@ -7,11 +8,12 @@ from localized_undo.utils.paths import CACHE_DIR, DATASET_DIR, WMDP_MODEL_DIR
 from localized_undo.utils.loss_functions import custom_login
 from localized_undo.utils.validation_functions import get_wmdp_bio_eval_fn
 from localized_undo.utils.parallel_launch import launch_in_parallel_one_per_gpu, get_parallel_launch_wrapper
+from unlearn_summary import write_summary_log
 
 FINAL_RUN = True  # Controls eval size and overwrite ok
 
 LR_RANGES = {
-    "bio_MaxEnt": [2e-5],  # [5e-5],
+    "bio_MaxEnt": [2e-5],  # [5e-5]
     "bio_RMU": [5e-5],  # [1e-4]
     "bio_repnoise": [2e-5],
     "bio_SAM": [2e-5],
@@ -148,6 +150,10 @@ for base_setup_id in BASE_SETUPS:
         for alpha in alpha_range:
             for seed in SEEDS:
                 new_setup_id, setup_config = create_lr_alpha_variant(base_setup_id, lr, alpha, seed)
+                final_model_path = os.path.join(setup_config["output_dir"], "final_model")
+                if os.path.isdir(final_model_path):
+                    print(f"Skipping completed setup: {new_setup_id} (found {final_model_path})")
+                    continue
                 setups[new_setup_id] = setup_config
                 SETUPS_TO_RUN.append(new_setup_id)
 
@@ -249,3 +255,4 @@ if __name__ == "__main__":
 
     # calls run_experiment in parallel on a separate gpu for each experiment setup when a gpu is available
     launch_in_parallel_one_per_gpu(experiment_list=experiments, experiment_fn=parallel_fn)
+    write_summary_log(setups=setups, setups_to_run=SETUPS_TO_RUN)

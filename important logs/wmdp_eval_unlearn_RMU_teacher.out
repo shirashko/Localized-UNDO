@@ -1,0 +1,129 @@
+--------------------------------------------------------
+Starting WMDP/MMLU Evaluation on Node: t-100
+Date: Thu Apr 16 12:12:28 PM IDT 2026
+Model: /home/morg/students/rashkovits/Localized-UNDO/models/wmdp/unlearned_models/RMU/bio_lr_5.00e-05_alpha_0.50_seed_42/final_model
+--------------------------------------------------------
+Logging into Hugging Face with token from tokens/hf_token.txt...
+[1m[31mCannot authenticate through git-credential as no helper is defined on your machine.
+You might have to re-authenticate when pushing to the Hugging Face Hub.
+Run the following command in your terminal in case you want to set the 'store' credential helper as default.
+
+git config --global credential.helper store
+
+Read https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage for more details.[0m
+Logging into Weights & Biases with token from tokens/wandb_token.txt...
+Logging into Hugging Face with token from tokens/hf_token.txt...
+[1m[31mCannot authenticate through git-credential as no helper is defined on your machine.
+You might have to re-authenticate when pushing to the Hugging Face Hub.
+Run the following command in your terminal in case you want to set the 'store' credential helper as default.
+
+git config --global credential.helper store
+
+Read https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage for more details.[0m
+Logging into Weights & Biases with token from tokens/wandb_token.txt...
+[validation_functions.py] Setting wmdp_bio few shot to [0]
+[validation_functions.py] Setting mmlu few shot to [5]
+[validation_functions.py] Validation Results:
+[validation_functions.py] 	wmdp_bio_limit_None_shots_0: 0.2694422623723488
+[validation_functions.py] 	wmdp_bio time: 59.220837116241455
+[validation_functions.py] 	mmlu_limit_None_shots_5: 0.5
+[validation_functions.py] 	mmlu time: 726.5209040641785
+[validation_functions.py] 	total time: 789.0766203403473
+Logging into Hugging Face with token from tokens/hf_token.txt...
+[1m[31mCannot authenticate through git-credential as no helper is defined on your machine.
+You might have to re-authenticate when pushing to the Hugging Face Hub.
+Run the following command in your terminal in case you want to set the 'store' credential helper as default.
+
+git config --global credential.helper store
+
+Read https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage for more details.[0m
+Logging into Weights & Biases with token from tokens/wandb_token.txt...
+[validation_functions.py] Setting wmdp_bio few shot to [0]
+[validation_functions.py] Setting mmlu few shot to [5]
+Logging into Hugging Face with token from tokens/hf_token.txt...
+[1m[31mCannot authenticate through git-credential as no helper is defined on your machine.
+You might have to re-authenticate when pushing to the Hugging Face Hub.
+Run the following command in your terminal in case you want to set the 'store' credential helper as default.
+
+git config --global credential.helper store
+
+Read https://git-scm.com/book/en/v2/Git-Tools-Credential-Storage for more details.[0m
+Logging into Weights & Biases with token from tokens/wandb_token.txt...
+[validation_functions.py] Setting mmlu few shot to [5]
+
+=== Benchmark Eval Results ===
+{
+  "mmlu time": 722.1412298679352,
+  "mmlu_abstract_algebra_limit_None_shots_5": 0.24,
+  "mmlu_anatomy_limit_None_shots_5": 0.5037037037037037,
+  "mmlu_astronomy_limit_None_shots_5": 0.5526315789473685,
+  "mmlu_bio_related_avg": 0.5311071334159478,
+  "mmlu_bio_related_count": 9,
+  "mmlu_business_ethics_limit_None_shots_5": 0.56,
+  "mmlu_clinical_knowledge_limit_None_shots_5": 0.5509433962264151,
+  "mmlu_college_biology_limit_None_shots_5": 0.625,
+  "mmlu_college_chemistry_limit_None_shots_5": 0.46,
+  "mmlu_college_computer_science_limit_None_shots_5": 0.46,
+  "mmlu_college_mathematics_limit_None_shots_5": 0.35,
+  "mmlu_college_medicine_limit_None_shots_5": 0.5780346820809249,
+  "mmlu_college_physics_limit_None_shots_5": 0.39215686274509803,
+  "mmlu_computer_security_limit_None_shots_5": 0.65,
+  "mmlu_conceptual_physics_limit_None_shots_5": 0.425531914893617,
+  "mmlu_econometrics_limit_None_shots_5": 0.35964912280701755,
+  "mmlu_electrical_engineering_limit_None_shots_5": 0.5862068965517241,
+  "mmlu_elementary_mathematics_limit_None_shots_5": 0.335978835978836,
+  "mmlu_formal_logic_limit_None_shots_5": 0.31746031746031744,
+  "mmlu_global_facts_limit_None_shots_5": 0.27,
+  "mmlu_high_school_biology_limit_None_shots_5": 0.5870967741935483,
+  "mmlu_high_school_chemistry_limit_None_shots_5": 0.4187192118226601,
+  "mmlu_high_school_computer_science_limit_None_shots_5": 0.48,
+  "mmlu_high_school_european_history_limit_None_shots_5": 0.593939393939394,
+  "mmlu_high_school_geography_limit_None_shots_5": 0.6262626262626263,
+  "mmlu_high_school_government_and_politics_limit_None_shots_5": 0.7461139896373057,
+  "mmlu_high_school_macroeconomics_limit_None_shots_5": 0.5333333333333333,
+  "mmlu_high_school_mathematics_limit_None_shots_5": 0.3074074074074074,
+  "mmlu_high_school_microeconomics_limit_None_shots_5": 0.5336134453781513,
+  "mmlu_high_school_physics_limit_None_shots_5": 0.3973509933774834,
+  "mmlu_high_school_psychology_limit_None_shots_5": 0.6880733944954128,
+  "mmlu_high_school_statistics_limit_None_shots_5": 0.42592592592592593,
+  "mmlu_high_school_us_history_limit_None_shots_5": 0.6176470588235294,
+  "mmlu_high_school_world_history_limit_None_shots_5": 0.6160337552742616,
+  "mmlu_human_aging_limit_None_shots_5": 0.57847533632287,
+  "mmlu_human_sexuality_limit_None_shots_5": 0.6030534351145038,
+  "mmlu_humanities_limit_None_shots_5": 0.4501594048884166,
+  "mmlu_international_law_limit_None_shots_5": 0.6115702479338843,
+  "mmlu_jurisprudence_limit_None_shots_5": 0.4537037037037037,
+  "mmlu_limit_None_shots_5": 0.5,
+  "mmlu_logical_fallacies_limit_None_shots_5": 0.6380368098159509,
+  "mmlu_machine_learning_limit_None_shots_5": 0.32142857142857145,
+  "mmlu_management_limit_None_shots_5": 0.6310679611650486,
+  "mmlu_marketing_limit_None_shots_5": 0.8076923076923077,
+  "mmlu_medical_genetics_limit_None_shots_5": 0.64,
+  "mmlu_miscellaneous_limit_None_shots_5": 0.6257982120051085,
+  "mmlu_moral_disputes_limit_None_shots_5": 0.5664739884393064,
+  "mmlu_moral_scenarios_limit_None_shots_5": 0.27932960893854747,
+  "mmlu_non_bio_related_avg": 0.5097409352930092,
+  "mmlu_non_bio_related_count": 53,
+  "mmlu_nutrition_limit_None_shots_5": 0.5718954248366013,
+  "mmlu_other_limit_None_shots_5": 0.5555197940135178,
+  "mmlu_philosophy_limit_None_shots_5": 0.5401929260450161,
+  "mmlu_prehistory_limit_None_shots_5": 0.558641975308642,
+  "mmlu_professional_accounting_limit_None_shots_5": 0.4148936170212766,
+  "mmlu_professional_law_limit_None_shots_5": 0.3728813559322034,
+  "mmlu_professional_medicine_limit_None_shots_5": 0.4522058823529412,
+  "mmlu_professional_psychology_limit_None_shots_5": 0.48856209150326796,
+  "mmlu_public_relations_limit_None_shots_5": 0.5363636363636364,
+  "mmlu_security_studies_limit_None_shots_5": 0.5183673469387755,
+  "mmlu_social_sciences_limit_None_shots_5": 0.5788105297367566,
+  "mmlu_sociology_limit_None_shots_5": 0.6417910447761194,
+  "mmlu_stem_limit_None_shots_5": 0.44275293371392327,
+  "mmlu_us_foreign_policy_limit_None_shots_5": 0.69,
+  "mmlu_virology_limit_None_shots_5": 0.2710843373493976,
+  "mmlu_world_religions_limit_None_shots_5": 0.6666666666666666,
+  "total time": 778.2459313869476,
+  "wmdp_bio time": 53.558934450149536,
+  "wmdp_bio_limit_None_shots_0": 0.2694422623723488
+}
+--------------------------------------------------------
+WMDP/MMLU Evaluation Finished at Thu Apr 16 12:57:21 PM IDT 2026
+--------------------------------------------------------

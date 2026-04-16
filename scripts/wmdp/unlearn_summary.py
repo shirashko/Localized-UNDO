@@ -47,6 +47,7 @@ def write_summary_log(setups, setups_to_run, summary_path="scripts/wmdp/logs/wmd
         cfg = setups[setup_id]
         method = _infer_method_name(setup_id)
         alpha = cfg["alpha"]
+        learning_rate = cfg.get("learning_rate")
         record_path = cfg["path_local_record"]
 
         wmdp_val = _extract_last_metric(
@@ -60,22 +61,23 @@ def write_summary_log(setups, setups_to_run, summary_path="scripts/wmdp/logs/wmd
             shots_suffix="_shots_5",
         )
         if wmdp_val is not None:
-            grouped[(method, alpha)]["wmdp"].append(wmdp_val)
+            grouped[(method, alpha, learning_rate)]["wmdp"].append(wmdp_val)
         if mmlu_val is not None:
-            grouped[(method, alpha)]["mmlu"].append(mmlu_val)
+            grouped[(method, alpha, learning_rate)]["mmlu"].append(mmlu_val)
 
     lines = []
     lines.append(
-        "method\talpha\tWMDP-Bio mean Accuracy (Forget ↓)\tWMDP-Bio std Accuracy (Forget ↓)\tMMLU mean Accuracy (Retain ↑)\tMMLU std Accuracy (Retain ↑)"
+        "method\talpha\tlearning_rate\tWMDP-Bio mean Accuracy (Forget ↓)\tWMDP-Bio std Accuracy (Forget ↓)\tMMLU mean Accuracy (Retain ↑)\tMMLU std Accuracy (Retain ↑)"
     )
-    for (method, alpha), vals in sorted(grouped.items(), key=lambda x: (x[0][0], x[0][1])):
+    for (method, alpha, learning_rate), vals in sorted(grouped.items(), key=lambda x: (x[0][0], x[0][1], x[0][2])):
         wmdp_scores = vals["wmdp"]
         mmlu_scores = vals["mmlu"]
         wmdp_mean = statistics.mean(wmdp_scores) if wmdp_scores else float("nan")
         mmlu_mean = statistics.mean(mmlu_scores) if mmlu_scores else float("nan")
         wmdp_std = statistics.stdev(wmdp_scores) if len(wmdp_scores) > 1 else 0.0
         mmlu_std = statistics.stdev(mmlu_scores) if len(mmlu_scores) > 1 else 0.0
-        lines.append(f"{method}\t{alpha}\t{wmdp_mean:.4f}\t{wmdp_std:.4f}\t{mmlu_mean:.4f}\t{mmlu_std:.4f}")
+        lr_text = f"{learning_rate:.2e}" if isinstance(learning_rate, (int, float)) else str(learning_rate)
+        lines.append(f"{method}\t{alpha}\t{lr_text}\t{wmdp_mean:.4f}\t{wmdp_std:.4f}\t{mmlu_mean:.4f}\t{mmlu_std:.4f}")
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with open(summary_path, "a", encoding="utf-8") as f:
