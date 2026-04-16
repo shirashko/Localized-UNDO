@@ -187,7 +187,10 @@ def run_experiment(setup_id, lr, train_files, model, seed, base_teacher_percent,
     current_setup['min_lr'] = lr / 10.
     current_setup['seed'] = seed
 
-    tbd_path = f"{datatype}/{model_name}/{setup_id}-{data_name}-lr_{lr:2e}-base-p_{base_teacher_percent}-seed_{seed}-alpha{alpha}"
+    model_name_for_path = model_name
+    if datatype == "bio" and model_name_for_path.startswith("bio_"):
+        model_name_for_path = model_name_for_path[len("bio_"):]
+    tbd_path = f"{datatype}/{model_name_for_path}/{setup_id}-{data_name}-lr_{lr:2e}-base-p_{base_teacher_percent}-seed_{seed}-alpha{alpha}"
 
     current_setup['output_dir'] = current_setup['output_dir'].replace('TBD', tbd_path)
     current_setup['path_local_record'] = current_setup['path_local_record'].replace('TBD', tbd_path)
@@ -220,7 +223,7 @@ def run_experiment(setup_id, lr, train_files, model, seed, base_teacher_percent,
         gradient_clipping_threshold = current_setup['gradient_clipping_threshold'], 
         max_length       = current_setup['max_length'],
         use_wandb        = current_setup['use_wandb'],
-        wandb_project    = current_setup['wandb_project'],
+        wandb_project    = current_setup['wandb_project'].replace('TBD', datatype),
         wandb_run_name   = tbd_path.replace('/', '_'),
         use_local_record = current_setup['use_local_record'],
         path_local_record= current_setup['path_local_record'],
