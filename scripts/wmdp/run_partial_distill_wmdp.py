@@ -76,7 +76,7 @@ def make_setup(**overrides):
         'use_local_record': True,
         'path_local_record': f"{WMDP_MODEL_DIR}/local_records/partial_distill_models/TBD.txt",
         'shrink_perturb_repeat': False,
-        'compile_mode': 'default',
+        'compile_mode': None,
         'layers_to_train': 'all',
         'layer_types_to_train': 'all',
         'base_teacher_name': None,
