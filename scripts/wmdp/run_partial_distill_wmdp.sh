@@ -28,6 +28,9 @@
 source /home/morg/students/rashkovits/miniconda3/etc/profile.d/conda.sh
 conda activate /home/morg/students/rashkovits/envs/undo
 
+# Reduce allocator fragmentation after large evals (lm-eval) + training peaks
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
 # --- Project Setup ---
 cd /home/morg/students/rashkovits/Localized-UNDO
 export PYTHONPATH=$PYTHONPATH:$(pwd)

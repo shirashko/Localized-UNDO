@@ -2,6 +2,7 @@ import os
 import random
 import math
 import json
+import gc
 
 import torch
 from torch.utils.data import DataLoader
@@ -19,6 +20,13 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from localized_undo.utils.loss_functions import forward_kl_loss_fn, print_acc, custom_makedirs
 from localized_undo.utils.process_datasets import make_sequence_length
 
+
+def _release_cuda_memory_after_eval():
+    """lm-eval / large forwards can leave VRAM fragmented; free cache before training steps."""
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+        torch.cuda.empty_cache()
 
 
 def partial_distill(
@@ -150,6 +158,13 @@ def partial_distill(
     # We'll use the teacher's tokenizer for dataset processing (assuming same vocab).
     tokenizer = teacher_tokenizer
 
+    # Lower activation memory during training (esp. long max_length + KD).
+    for _m in (teacher_model, student_model):
+        if hasattr(_m, "gradient_checkpointing_enable"):
+            _m.gradient_checkpointing_enable()
+    if base_teacher_name is not None and hasattr(base_teacher_model, "gradient_checkpointing_enable"):
+        base_teacher_model.gradient_checkpointing_enable()
+
     # ------------------------------------------------------------
     # Shrink + Perturb (one-time, if requested)
     # ------------------------------------------------------------
@@ -279,6 +294,8 @@ def partial_distill(
     if use_local_record and accelerator.is_main_process:
         with open(path_local_record, "a", encoding="utf-8") as f:
             f.write(json.dumps(teacher_eval_dict) + "\n")
+
+    _release_cuda_memory_after_eval()
 
     # ------------------------------------------------------------
     # Distillation Loop
@@ -483,6 +500,8 @@ def partial_distill(
                         with open(path_local_record, "a", encoding="utf-8") as f:
                             f.write(json.dumps(val_log_dict) + "\n")
 
+                    _release_cuda_memory_after_eval()
+
                     if stop_cond_fn(student_eval_dict=val_log_dict, teacher_eval_dict=teacher_eval_dict):
                         stop_early = True
                         break
@@ -511,7 +530,9 @@ def partial_distill(
     if use_local_record and accelerator.is_main_process:
         with open(path_local_record, "a", encoding="utf-8") as f:
             f.write(json.dumps(final_val_dict) + "\n")
-            
+
+    _release_cuda_memory_after_eval()
+
     # Final model saving at the end of all epochs
     if accelerator.is_main_process:
         final_model_path = os.path.join(output_dir, "final_model")
